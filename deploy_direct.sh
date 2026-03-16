@@ -390,6 +390,9 @@ cd frontend && npm install && npm run build && cd ..
 echo "Syncing Frontend to S3..."
 aws s3 sync frontend/dist "s3://$S3_BUCKET" --delete --region "$REGION"
 
+echo "Invalidating CloudFront cache..."
+aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --region "$REGION" > /dev/null
+
 echo "Updating Lambda environment with production URL..."
 aws lambda update-function-configuration --function-name "$LAMBDA_NAME" \
     --environment "Variables={USERS_TABLE=Whalesync-Users,MARKETS_TABLE=Whalesync-Markets,TRADES_TABLE=Whalesync-Trades,STRATEGIES_TABLE=Whalesync-Strategies,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN}" --region "$REGION" > /dev/null
