@@ -8,6 +8,7 @@ const Simulator = () => {
     const { portfolio, settings, refreshPortfolio } = useContext(PortfolioContext);
     const [strategies, setStrategies] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [aiSignals, setAiSignals] = useState([]);
     const [newStrat, setNewStrat] = useState({
         name: '',
         platform: 'Polymarket',
@@ -26,6 +27,12 @@ const Simulator = () => {
             fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`)
                 .then(res => res.json())
                 .then(data => setStrategies(data.strategies || []))
+                .catch(err => console.error(err));
+
+            // Fetch AI Signals
+            fetch(`${apiUrl}/api/signals/`)
+                .then(res => res.json())
+                .then(data => setAiSignals(data.signals || []))
                 .catch(err => console.error(err));
 
             // Also refresh global portfolio to catch automated trades
@@ -114,7 +121,7 @@ const Simulator = () => {
             const data = await res.json();
             if (res.ok) {
                 setStrategies([...strategies, data.strategy]);
-                setNewStrat({ name: '', platform: 'Polymarket', allocation: 10, betSizePercentage: 5, selectedSources: [], category: 'All', isLive: false });
+                setNewStrat({ name: '', platform: 'Polymarket', allocation: 10, betSizePercentage: 5, selectedSources: ['AI_CONSENSUS'], category: 'All', isLive: false });
                 // Refresh portfolio immediately to show the initial simulation trade
                 refreshPortfolio();
             } else {
@@ -163,7 +170,12 @@ const Simulator = () => {
     const SourceMultiselect = ({ platform, selected, onToggle }) => {
         const [isOpen, setIsOpen] = useState(false);
         const dropdownRef = useRef(null);
-        const availableSources = settings.copy_sources.filter(s => s.active && s.platform === platform);
+        const userSources = settings.copy_sources.filter(s => s.active && s.platform === platform);
+        
+        // Inject AI Consensus as a global virtual source for Polymarket
+        const availableSources = platform === 'Polymarket' 
+            ? [{ address: 'AI_CONSENSUS', name: '✨ AI Consensus (Top Traders)', platform: 'Polymarket' }, ...userSources]
+            : userSources;
 
         useEffect(() => {
             const handleClickOutside = (event) => {
@@ -305,8 +317,43 @@ const Simulator = () => {
 
     return (
         <div className="container mt-4 animate-fade-in" style={{ padding: '2rem 1rem' }}>
-            <h2 style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Activity className="text-primary" size={28} /> Strategy Sandbox System
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: '2.5rem', background: 'var(--primary-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        Strategy Simulator
+                    </h1>
+                    <p className="text-muted">Build, backtest, and deploy automated paper trading bots.</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Simulation Wallet</div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>${portfolio.balance.toLocaleString()}</div>
+                </div>
+            </div>
+
+            {/* AI Intelligence Banner - Global Consensus Signals */}
+            {aiSignals.length > 0 && (
+                <div className="glass-panel animate-fade-in" style={{ padding: '1.25rem', marginBottom: '2.5rem', border: '1px solid var(--accent)', background: 'rgba(99, 102, 241, 0.03)' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Activity className="text-accent" size={18} />
+                        <h3 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Market Intelligence</h3>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {aiSignals.slice(0, 3).map((sig, idx) => (
+                            <div key={idx} style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', borderLeft: '3px solid var(--accent)' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{sig.market_title}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.8, marginBottom: '0.5rem', lineHeight: 1.4 }}>{sig.message}</div>
+                                <div className="flex justify-between items-center">
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 'bold' }}>CONVICTION: {sig.severity === 'high' ? 'HIGH' : 'MEDIUM'}</span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{new Date(sig.timestamp).toLocaleTimeString()}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.2rem', opacity: 0.8 }}>
+                <Activity className="text-primary" size={24} /> Performance Overview
             </h2>
 
             <div className="flex gap-4 mb-8" style={{ flexWrap: 'wrap' }}>
@@ -533,6 +580,7 @@ const Simulator = () => {
                             />
                             <p className="text-xs text-muted mt-1">% of strategy balance to use per trade.</p>
                         </div>
+                    {/* Form content continues below */}
                         <div className="glass-panel" style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold uppercase">Use for Live</span>

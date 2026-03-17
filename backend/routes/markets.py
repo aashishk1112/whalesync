@@ -20,18 +20,26 @@ def get_markets(platform: Optional[str] = None):
     # Returning mocked robust market data for simulator frontend
     markets = MOCK_MARKETS
     if platform:
-        markets = [m for m in MOCK_MARKETS if m["platform"].lower() == platform.lower()]
+        markets = [m for m in MOCK_MARKETS if str(m.get("platform", "")).lower() == str(platform).lower()]
     return {"markets": markets}
 
 @router.get("/leaderboard")
 def get_leaderboard(limit: int = 10):
+    from services.dynamodb_service import get_latest_ai_analysis
+    
+    # Standardized: Type=TRADER_SCORES, ID=ALL_POLYMARKET
+    cached = get_latest_ai_analysis("TRADER_SCORES", "ALL_POLYMARKET")
+    if cached:
+        leaderboard = cached.get("data", [])[:limit]
+        return {"leaderboard": leaderboard, "cached": True}
+        
+    # Fallback to raw if no cache exists yet (though background job should handle it)
     from services.polymarket_service import polymarket_service
-    leaderboard = polymarket_service.get_leaderboard(limit=limit)
-    return {"leaderboard": leaderboard}
+    return {"leaderboard": polymarket_service.get_leaderboard(limit=limit), "cached": False}
 
 @router.get("/categories")
 def get_categories(platform: Optional[str] = "Polymarket"):
-    if platform.lower() == "polymarket":
+    if platform and str(platform).lower() == "polymarket":
         from services.polymarket_service import polymarket_service
         return {"categories": polymarket_service.get_all_categories()}
     return {"categories": []}

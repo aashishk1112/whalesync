@@ -25,7 +25,7 @@ class StrategyCreate(BaseModel):
 
 @router.get("/")
 def get_strategies(user_id: str):
-    from services.dynamodb_service import get_strategy_trades
+    from services.dynamodb_service import get_strategy_trades, get_latest_ai_analysis
     
     strategies = get_user_strategies(user_id)
     
@@ -42,8 +42,28 @@ def get_strategies(user_id: str):
 
             for addr in s.get("source_addresses", []):
                 try:
-                    # Fetch real activities from Polymarket
-                    real_trades = polymarket_service.get_trader_activity(addr)
+                    real_trades = []
+                    if addr == "AI_CONSENSUS":
+                        # Fetch cached AI generated signals
+                        # Standardized: Type=SIGNALS, ID=GLOBAL_POLYMARKET
+                        cached_result = get_latest_ai_analysis("SIGNALS", "GLOBAL_POLYMARKET")
+                        ai_signals = []
+                        if cached_result:
+                            ai_signals = cached_result.get("data", [])
+                        # Convert high-conviction signals to a "trade" format compatible with the loop
+                        for sig in ai_signals:
+                            if float(sig.get("confidence", 0)) >= 0.7:
+                                real_trades.append({
+                                    "transactionHash": f"ai_{sig['market_id']}",
+                                    "conditionId": sig["market_id"],
+                                    "side": sig["signal"], # "BUY" or "SELL"
+                                    "price": 0.5, # Default price for simplified signal mirroring
+                                    "is_ai": True
+                                })
+                    else:
+                        # Fetch real activities from Polymarket
+                        real_trades = polymarket_service.get_trader_activity(addr)
+                    
                     # Get current trades for deduplication
                     existing_tx_hashes = {t.get("tx_hash") for t in strategy_trades if t.get("tx_hash")}
                     
@@ -56,49 +76,56 @@ def get_strategies(user_id: str):
                             trade_allowed = False
                             strategy_category = s.get("category", "All")
                             
-                            if strategy_category == "All":
+                            if strategy_category == "All" or rt.get("is_ai"):
                                 trade_allowed = True
                             else:
                                 # Need to fetch market details to check category
-                                market_details = polymarket_service.get_market_details(market_id)
-                                market_cat = market_details.get("category", "")
-                                if market_cat.lower() == strategy_category.lower():
-                                    trade_allowed = True
-                                    print(f"Category match: {market_cat} for strategy {s['name']}")
+                                try:
+                                    market_details = polymarket_service.get_market_details(market_id)
+                                    market_cat = market_details.get("category", "")
+                                    if market_cat.lower() == strategy_category.lower():
+                                        trade_allowed = True
+                                except:
+                                    pass
                             
-                                if trade_allowed:
-                                    # Calculate trade amount based on strategy-specific bet size
-                                    # Amount = BetSize% of (Strategy Initial Allocation)
-                                    strategy_balance = float(s.get("strategy_balance", 0))
-                                    initial_alloc = float(s.get("initial_allocation_dollars", 1000.0))
-                                    bet_percentage = float(s.get("bet_size_percentage", 5.0))
+                            if trade_allowed:
+                                # Fetch cached AI Score for the trader
+                                # Standardized: Type=SCORE, ID=WALLET_ADDRESS
+                                ai_cached = get_latest_ai_analysis("SCORE", addr)
+                                ai_score = 0
+                                if ai_cached:
+                                    ai_score = float(ai_cached.get("data", {}).get("ai_score", 0))
+                                
+                                # AI Validation Rule: Only copy if AI Score >= 60 (unless it's an AI-consensus trade)
+                                if ai_score < 60 and not rt.get("is_ai"):
+                                    print(f"Skipping trade: AI Score for {addr} is too low ({ai_score})")
+                                    continue
                                     
-                                    trade_amount = (bet_percentage / 100.0) * initial_alloc
-                                    
-                                    # Hard Stop: If trade amount > remaining strategy balance, do not execute
-                                    if trade_amount > strategy_balance:
-                                        print(f"STOPPED trade for strategy {s['name']}: Not enough strategy balance (${strategy_balance:.2f} < ${trade_amount:.2f})")
-                                        continue
+                                strategy_balance = float(s.get("strategy_balance", 0))
+                                initial_alloc = float(s.get("initial_allocation_dollars", 1000.0))
+                                bet_percentage = float(s.get("bet_size_percentage", 5.0))
+                                
+                                trade_amount = (bet_percentage / 100.0) * initial_alloc
+                                
+                                # Hard Stop: If trade amount > remaining strategy balance, do not execute
+                                if trade_amount > strategy_balance:
+                                    continue
 
-                                    # Mirror this trade into our simulator
-                                    side = str(rt.get("side") or "").upper()
-                                    new_trade = record_trade(
-                                        user_id=user_id,
-                                        strategy_id=s["strategy_id"],
-                                        market_id=market_id,
-                                        position="YES" if side == "BUY" else "NO",
-                                        price=float(rt.get("price", 0.5)),
-                                        amount=trade_amount,
-                                        category=s.get("category", "All"),
-                                        tx_hash=tx_hash
-                                    )
-                                    if new_trade:
-                                        strategy_trades.append(new_trade)
-                                        # Update the local s dict to reflect new balance (though s is just a copy from DB scan usually)
-                                        s["strategy_balance"] = float(s["strategy_balance"]) - trade_amount
-                                        print(f"Mirrored real trade {tx_hash} for {addr} in strategy {s['strategy_id']}. Remaining Balance: ${s['strategy_balance']:.2f}")
-                                    else:
-                                        print(f"SKIPPED trade {tx_hash} for {addr} due to global capital exhaustion or record error")
+                                side = str(rt.get("side") or "").upper()
+                                new_trade = record_trade(
+                                    user_id=user_id,
+                                    strategy_id=s["strategy_id"],
+                                    market_id=market_id,
+                                    position="YES" if side == "BUY" else "NO",
+                                    price=float(rt.get("price", 0.5)),
+                                    amount=trade_amount,
+                                    category=s.get("category", "All"),
+                                    tx_hash=tx_hash
+                                )
+                                if new_trade:
+                                    strategy_trades.append(new_trade)
+                                    s["strategy_balance"] = float(s["strategy_balance"]) - trade_amount
+                                    print(f"Mirrored trade with AI Score {ai_score} validation success.")
                 except Exception as e:
                     print(f"Sync error for {addr}: {e}")
 

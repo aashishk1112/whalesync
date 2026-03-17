@@ -32,7 +32,7 @@ def get_now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 # --- User Ops ---
-def create_user(email: str, username: str, picture_url: str = None) -> Dict[str, Any]:
+def create_user(email: str, username: str, picture_url: Optional[str] = None) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
     user_item = {
         "userId": user_id,  # Live schema key
@@ -363,3 +363,64 @@ def wipe_user_data(user_id: str):
         
     # 3. Finally, delete the user record
     users_table.delete_item(Key={"userId": user_id})
+# --- AI Analysis Storage ---
+def save_ai_analysis(analysis_type: str, data: Any, target_id: str = "global"):
+    """
+    Saves AI scores or signals. 
+    target_id can be 'global' for market signals or a wallet address for trader scores.
+    """
+    timestamp = get_now_iso()
+    item = {
+        "analysis_id": f"{analysis_type}:{target_id}",
+        "type": analysis_type, # 'signal' or 'trader_score'
+        "target_id": target_id,
+        "data": data, # This can be a JSON-serializable dict or list
+        "updated_at": timestamp
+    }
+    
+    # We'll use the markets_table for metadata storage as a shortcut for now, 
+    # or ideally a separate table. Let's use strategies_table for 'ai_cache' items
+    # if it doesn't conflict, but a dedicated 'Whalesync-AI' table is better.
+    # For now, let's assume we use a specific key in the markets table or strategies table.
+    try:
+        from decimal import Decimal
+        from datetime import datetime
+
+        # Helper to convert float to decimal recursively
+        def dec(obj):
+            if isinstance(obj, float):
+                return Decimal(str(obj))
+            if isinstance(obj, dict):
+                return {k: dec(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [dec(v) for v in obj]
+            return obj
+
+        clean_data = dec(data)
+        
+        # Standardized key: AI_CACHE_{TYPE}_{ID}
+        cache_key = f"AI_CACHE_{analysis_type.upper()}_{target_id.upper()}"
+        
+        strategies_table.put_item(
+            Item={
+                'strategy_id': cache_key,
+                'user_id': "SYSTEM",
+                'type': "AI_CACHE",
+                'analysis_type': analysis_type.upper(),
+                'target_id': target_id.upper(),
+                'data': clean_data,
+                'timestamp': datetime.utcnow().isoformat(),
+                'updated_at': get_now_iso()
+            }
+        )
+    except Exception as e:
+        print(f"Error saving AI analysis: {e}")
+
+def get_latest_ai_analysis(analysis_type: str, target_id: str = "global") -> Optional[Dict[str, Any]]:
+    try:
+        cache_key = f"AI_CACHE_{analysis_type.upper()}_{target_id.upper()}"
+        response = strategies_table.get_item(Key={"strategy_id": cache_key})
+        return response.get("Item")
+    except Exception as e:
+        print(f"Error fetching AI analysis: {e}")
+        return None

@@ -182,15 +182,15 @@ const Dashboard = () => {
 
                     {/* Tab Navigation */}
                     <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                        {['Polymarket', 'Kalshi', 'Manifold', 'Signals'].map(tab => (
+                        {['Polymarket', 'Kalshi', 'Manifold'].map(tab => (
                             <button
                                 key={tab}
-                                onClick={() => (tab === 'Polymarket' || tab === 'Signals') && setActiveTab(tab)}
+                                onClick={() => (tab === 'Polymarket') && setActiveTab(tab)}
                                 className={activeTab === tab ? 'btn-primary' : 'btn-outline'}
                                 style={{
                                     padding: '0.5rem 1.5rem',
-                                    opacity: (tab === 'Polymarket' || tab === 'Signals') ? 1 : 0.4,
-                                    cursor: (tab === 'Polymarket' || tab === 'Signals') ? 'pointer' : 'not-allowed',
+                                    opacity: (tab === 'Polymarket') ? 1 : 0.4,
+                                    cursor: (tab === 'Polymarket') ? 'pointer' : 'not-allowed',
                                     fontSize: '0.9rem',
                                     background: activeTab === tab ? 'var(--primary)' : 'transparent',
                                     border: activeTab === tab ? 'none' : '1px solid var(--border)'
@@ -222,6 +222,7 @@ const Dashboard = () => {
                                         <tr style={{ borderBottom: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             <th style={{ padding: '0.75rem' }}>Rank</th>
                                             <th style={{ padding: '0.75rem' }}>Trader</th>
+                                            <th style={{ padding: '0.75rem' }}>AI Score</th>
                                             <th style={{ padding: '0.75rem' }}>Address</th>
                                             <th style={{ padding: '0.75rem', textAlign: 'right' }}>Daily PnL (Realized/UTC)</th>
                                             <th style={{ padding: '0.75rem' }}></th>
@@ -243,6 +244,20 @@ const Dashboard = () => {
                                                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{trader.userName?.charAt(0) || 'T'}</div>
                                                         )}
                                                         <span style={{ fontWeight: 500 }}>{trader.userName || 'Unknown'}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <div style={{ 
+                                                        padding: '0.2rem 0.5rem', 
+                                                        borderRadius: '1rem', 
+                                                        background: 'rgba(56, 189, 248, 0.1)', 
+                                                        color: 'var(--primary)', 
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                                                        display: 'inline-block'
+                                                    }}>
+                                                        {trader.ai_score || 50}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '0.75rem' }}>
@@ -281,29 +296,7 @@ const Dashboard = () => {
                         </section>
                     )}
 
-                    {activeTab === 'Signals' && (
-                        <div className="glass-panel" style={{
-                            minHeight: '400px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '1rem',
-                            padding: '2rem',
-                            textAlign: 'center',
-                            background: 'rgba(30, 41, 59, 0.4)',
-                            borderStyle: 'dashed',
-                            borderWidth: '2px'
-                        }}>
-                            <Activity size={48} className="text-primary" style={{ opacity: 0.3 }} />
-                            <div>
-                                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Coming Soon</h4>
-                                <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.6' }}>
-                                    Real-time AI-driven consensus signals and market sentiment analysis are currently under beta testing.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                    {/* Signals section removed - moved to Simulator */}
                 </div>
             </div>
         </div>
