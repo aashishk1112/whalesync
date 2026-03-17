@@ -177,141 +177,133 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <div className="dashboard-content" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-                gap: '2rem' 
-            }}>
-                {/* Left Column: Leaderboard */}
+            <div className="dashboard-content">
                 <div className="flex-col gap-6" style={{ display: 'flex' }}>
 
-                    {/* Platform Tabs */}
+                    {/* Tab Navigation */}
                     <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                        {['Polymarket', 'Kalshi', 'Manifold'].map(platform => (
+                        {['Polymarket', 'Kalshi', 'Manifold', 'Signals'].map(tab => (
                             <button
-                                key={platform}
-                                onClick={() => platform === 'Polymarket' && setActiveTab(platform)}
-                                className={activeTab === platform ? 'btn-primary' : 'btn-outline'}
+                                key={tab}
+                                onClick={() => (tab === 'Polymarket' || tab === 'Signals') && setActiveTab(tab)}
+                                className={activeTab === tab ? 'btn-primary' : 'btn-outline'}
                                 style={{
                                     padding: '0.5rem 1.5rem',
-                                    opacity: platform === 'Polymarket' ? 1 : 0.4,
-                                    cursor: platform === 'Polymarket' ? 'pointer' : 'not-allowed',
+                                    opacity: (tab === 'Polymarket' || tab === 'Signals') ? 1 : 0.4,
+                                    cursor: (tab === 'Polymarket' || tab === 'Signals') ? 'pointer' : 'not-allowed',
                                     fontSize: '0.9rem',
-                                    background: activeTab === platform ? 'var(--primary)' : 'transparent',
-                                    border: activeTab === platform ? 'none' : '1px solid var(--border)'
+                                    background: activeTab === tab ? 'var(--primary)' : 'transparent',
+                                    border: activeTab === tab ? 'none' : '1px solid var(--border)'
                                 }}
                             >
-                                {platform} {platform !== 'Polymarket' && '(Soon)'}
+                                {tab} {(tab === 'Kalshi' || tab === 'Manifold') && '(Soon)'}
                             </button>
                         ))}
                     </div>
 
-                    {/* Leaderboard Section */}
-                    <section className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <div className="flex justify-between items-center mb-6">
-                            <a 
-                                href="https://polymarket.com/leaderboard/overall/today/profit" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="hover-text-primary"
-                                style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <TrendingUp className="text-primary" size={20} /> Today's Top Earners (PnL) <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
-                                </h3>
-                            </a>
-                        </div>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                        <th style={{ padding: '0.75rem' }}>Rank</th>
-                                        <th style={{ padding: '0.75rem' }}>Trader</th>
-                                        <th style={{ padding: '0.75rem' }}>Address</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'right' }}>Daily PnL (Realized/UTC)</th>
-                                        <th style={{ padding: '0.75rem' }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {isLoadingLeaderboard ? (
-                                        <tr><td colSpan="5" className="text-center py-8 italic text-muted">Loading leaderboard data...</td></tr>
-                                    ) : leaderboard.length === 0 ? (
-                                        <tr><td colSpan="5" className="text-center py-8 italic text-muted">No leaderboard data found.</td></tr>
-                                    ) : leaderboard.map((trader, idx) => (
-                                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.9rem', transition: 'background 0.2s' }} className="hover-row">
-                                            <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>#{idx + 1}</td>
-                                            <td style={{ padding: '0.75rem' }}>
-                                                <div className="flex items-center gap-3">
-                                                    {trader.profileImage ? (
-                                                        <img src={trader.profileImage} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)' }} />
-                                                    ) : (
-                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{trader.userName?.charAt(0) || 'T'}</div>
-                                                    )}
-                                                    <span style={{ fontWeight: 500 }}>{trader.userName || 'Unknown'}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '0.75rem' }}>
-                                                <a
-                                                    href={`https://polymarket.com/profile/${trader.proxyWallet}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{ fontSize: '0.75rem', color: 'var(--primary)', opacity: 0.8 }}
-                                                >
-                                                    {trader.proxyWallet.substring(0, 6)}...{trader.proxyWallet.substring(38)}
-                                                </a>
-                                            </td>
-                                            <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent)' }}>
-                                                +${parseFloat(trader.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                            </td>
-                                            <td style={{ padding: '0.75rem' }}>
-                                                <button
-                                                    className="btn-outline"
-                                                    style={{ padding: '0.2rem 0.8rem', fontSize: '0.75rem' }}
-                                                    onClick={() => handleFollow(trader)}
-                                                >
-                                                    Follow
-                                                </button>
-                                            </td>
+                    {activeTab === 'Polymarket' && (
+                        <section className="glass-panel" style={{ padding: '1.5rem' }}>
+                            <div className="flex justify-between items-center mb-6">
+                                <a 
+                                    href="https://polymarket.com/leaderboard/overall/today/profit" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="hover-text-primary"
+                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                >
+                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <TrendingUp className="text-primary" size={20} /> Today's Top Earners (PnL) <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
+                                    </h3>
+                                </a>
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                            <th style={{ padding: '0.75rem' }}>Rank</th>
+                                            <th style={{ padding: '0.75rem' }}>Trader</th>
+                                            <th style={{ padding: '0.75rem' }}>Address</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'right' }}>Daily PnL (Realized/UTC)</th>
+                                            <th style={{ padding: '0.75rem' }}></th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style={{ marginTop: '1rem', padding: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', opacity: 0.7 }}>
-                            <p style={{ margin: 0 }}>
-                                <strong>Note:</strong> Leaderboard rankings are based on official Polymarket <strong>Realized PnL</strong> for the current UTC day.
-                                Figures on individual profile charts may differ as they often include unrealized gains and use rolling 24-hour windows.
-                            </p>
-                        </div>
-                    </section>
-                </div>
+                                    </thead>
+                                    <tbody>
+                                        {isLoadingLeaderboard ? (
+                                            <tr><td colSpan="5" className="text-center py-8 italic text-muted">Loading leaderboard data...</td></tr>
+                                        ) : leaderboard.length === 0 ? (
+                                            <tr><td colSpan="5" className="text-center py-8 italic text-muted">No leaderboard data found.</td></tr>
+                                        ) : leaderboard.map((trader, idx) => (
+                                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.9rem', transition: 'background 0.2s' }} className="hover-row">
+                                                <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>#{idx + 1}</td>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <div className="flex items-center gap-3">
+                                                        {trader.profileImage ? (
+                                                            <img src={trader.profileImage} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)' }} />
+                                                        ) : (
+                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{trader.userName?.charAt(0) || 'T'}</div>
+                                                        )}
+                                                        <span style={{ fontWeight: 500 }}>{trader.userName || 'Unknown'}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <a
+                                                        href={`https://polymarket.com/profile/${trader.proxyWallet}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ fontSize: '0.75rem', color: 'var(--primary)', opacity: 0.8 }}
+                                                    >
+                                                        {trader.proxyWallet.substring(0, 6)}...{trader.proxyWallet.substring(38)}
+                                                    </a>
+                                                </td>
+                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                                    +${parseFloat(trader.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                </td>
+                                                <td style={{ padding: '0.75rem' }}>
+                                                    <button
+                                                        className="btn-outline"
+                                                        style={{ padding: '0.2rem 0.8rem', fontSize: '0.75rem' }}
+                                                        onClick={() => handleFollow(trader)}
+                                                    >
+                                                        Follow
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style={{ marginTop: '1rem', padding: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', opacity: 0.7 }}>
+                                <p style={{ margin: 0 }}>
+                                    <strong>Note:</strong> Leaderboard rankings are based on official Polymarket <strong>Realized PnL</strong> for the current UTC day.
+                                    Figures on individual profile charts may differ as they often include unrealized gains and use rolling 24-hour windows.
+                                </p>
+                            </div>
+                        </section>
+                    )}
 
-                {/* Right Column: Signals Placeholder */}
-                <div>
-                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.6 }}>
-                        <TrendingUp size={20} className="text-primary" /> Live Signals
-                    </h3>
-                    <div className="glass-panel" style={{
-                        height: '400px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '1rem',
-                        padding: '2rem',
-                        textAlign: 'center',
-                        background: 'rgba(30, 41, 59, 0.4)',
-                        borderStyle: 'dashed',
-                        borderWidth: '2px'
-                    }}>
-                        <Activity size={48} className="text-primary" style={{ opacity: 0.3 }} />
-                        <div>
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Coming Soon</h4>
-                            <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.6' }}>
-                                Real-time AI-driven consensus signals and market sentiment analysis are currently under beta testing.
-                            </p>
+                    {activeTab === 'Signals' && (
+                        <div className="glass-panel" style={{
+                            minHeight: '400px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '1rem',
+                            padding: '2rem',
+                            textAlign: 'center',
+                            background: 'rgba(30, 41, 59, 0.4)',
+                            borderStyle: 'dashed',
+                            borderWidth: '2px'
+                        }}>
+                            <Activity size={48} className="text-primary" style={{ opacity: 0.3 }} />
+                            <div>
+                                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Coming Soon</h4>
+                                <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    Real-time AI-driven consensus signals and market sentiment analysis are currently under beta testing.
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
