@@ -8,6 +8,20 @@ if [ "$ENV" != "dev" ] && [ "$ENV" != "prod" ]; then
     exit 1
 fi
 
+# Branch Segregation Logic
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$ENV" == "prod" ] && [ "$CURRENT_BRANCH" != "main" ]; then
+    echo "ERROR: Production deployment is only allowed from the 'main' branch. Current branch: $CURRENT_BRANCH"
+    exit 1
+fi
+
+if [ "$ENV" == "dev" ] && [ "$CURRENT_BRANCH" == "main" ]; then
+    echo "ERROR: Development deployment is not allowed from the 'main' branch. Please use a feature branch. Current branch: $CURRENT_BRANCH"
+    exit 1
+fi
+
+echo "Deploying to $ENV from branch $CURRENT_BRANCH..."
+
 REGION=$(aws configure get region || echo "us-east-1")
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 PREFIX="${ENV}-whalesync"
@@ -411,8 +425,6 @@ echo "Building Frontend..."
 # Point frontend to CloudFront domain for unified API access
 if [ "$ENV" == "dev" ]; then
     cp frontend/.env.development frontend/.env.production
-else
-    cp frontend/.env.production frontend/.env.production
 fi
 # Override VITE_API_URL to use the CloudFront domain if needed, 
 # but for production/integrated build it usually uses /api relative path or $CF_DOMAIN

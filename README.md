@@ -51,16 +51,15 @@ We use a **prefixed resource strategy** to ensure complete isolation between env
 - **Dev Resources**: `dev-whalesync-users`, `dev-whalesync-secrets`, etc.
 - **Prod Resources**: `prod-whalesync-users`, `prod-whalesync-secrets`, etc.
 
-### Deployment Script
-The `deploy_direct.sh` script automates the entire provisioning and deployment process:
+### Deployment Strategy & Branch Segregation
+The `deploy_direct.sh` script enforces a strict branch-to-environment mapping to prevent accidental overrides:
 
-```bash
-# Deploy to Development
-./deploy_direct.sh dev
+| Environment | Target Branch | CLI Command |
+| :--- | :--- | :--- |
+| **Production** | `main` | `./deploy_direct.sh prod` |
+| **Development** | Feature Branches (non-`main`) | `./deploy_direct.sh dev` |
 
-# Deploy to Production (Main Branch)
-./deploy_direct.sh prod
-```
+The script validates your current Git branch before proceeding with any AWS provisioning.
 
 The script handles:
 1. DynamoDB table creation & automated seeding (Subscription Tiers).
