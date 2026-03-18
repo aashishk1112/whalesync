@@ -7,7 +7,7 @@ import { ClobClient } from '@polymarket/clob-client';
 import RiskDisclosureModal from '../components/RiskDisclosureModal';
 
 const Settings = () => {
-    const { settings, updateCapital, addSource, purchaseSlot, toggleSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
+    const { settings, updateCapital, addSource, toggleSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
     const { logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('paper');
     const [capital, setCapital] = useState(settings.simulation_capital);
@@ -24,15 +24,15 @@ const Settings = () => {
     useEffect(() => {
         setCapital(settings.simulation_capital);
 
-        // Check for success/canceled query params from Stripe
+        // Check for success/canceled query params from Stripe (subscriptions)
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('success')) {
-            setMessage({ type: 'success', text: 'Slot purchase initiated! Updating your limits shortly...' });
+            setMessage({ type: 'success', text: 'Transaction successful! Updating your limits shortly...' });
 
             // Wait 3 seconds for webhook to process before refreshing
             const refreshTimer = setTimeout(() => {
                 refreshPortfolio();
-                setMessage({ type: 'success', text: 'Slot purchased successfully! Your limits have been updated.' });
+                setMessage({ type: 'success', text: 'Limits updated successfully.' });
                 // Clean up URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }, 3000);
@@ -176,13 +176,13 @@ const Settings = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <span>{message.text}</span>
                         {message.isLimitError && (
-                            <button
-                                onClick={purchaseSlot}
+                            <a
+                                href="/subscription"
                                 className="btn-primary"
-                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap', textDecoration: 'none' }}
                             >
-                                <Plus size={14} style={{ marginRight: '4px' }} /> Buy Slot ($5)
-                            </button>
+                                <Plus size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Upgrade Plan
+                            </a>
                         )}
                     </div>
                     <button
@@ -245,38 +245,6 @@ const Settings = () => {
                         <p className="text-xs text-muted mt-2">Initial paper trading portfolio available for simulation.</p>
                     </section>
 
-                    <section className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
-                            <ShieldCheck size={20} className="text-primary" /> Subscription Slots
-                        </h3>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                    {settings.copy_sources.filter(s => s.platform === newSource.platform).length} / {2 + Math.max(0, settings.source_slots - 6 - settings.copy_sources.filter(s => s.platform !== newSource.platform && settings.copy_sources.filter(cs => cs.platform === s.platform).indexOf(s) >= 2).length)}
-                                </div>
-                                <div className="text-sm text-muted">{newSource.platform} Slots Used</div>
-                            </div>
-                            <button className="btn-outline" style={{ display: 'flex', gap: '0.5rem' }} onClick={purchaseSlot}>
-                                <Plus size={16} /> Buy Slot ($5)
-                            </button>
-                        </div>
-
-                        <div style={{
-                            height: '6px',
-                            background: 'rgba(255,255,255,0.05)',
-                            borderRadius: '3px',
-                            marginBottom: '1rem',
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{
-                                width: `${Math.min(100, (settings.copy_sources.filter(s => s.platform === newSource.platform).length / (2 + Math.max(0, settings.source_slots - 6))) * 100)}%`,
-                                height: '100%',
-                                background: 'var(--primary)',
-                                transition: 'width 0.3s ease'
-                            }} />
-                        </div>
-
-                    </section>
 
                     <section className="glass-panel" style={{ padding: '1.5rem' }}>
                         <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>

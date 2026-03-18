@@ -4,7 +4,7 @@ import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlu
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-    const { portfolio, addSource, purchaseSlot } = useContext(PortfolioContext);
+    const { portfolio, settings, addSource } = useContext(PortfolioContext);
     const [signals, setSignals] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [activeTab, setActiveTab] = useState('Polymarket');
@@ -89,11 +89,9 @@ const Dashboard = () => {
                     <span style={{ fontWeight: 500, flex: 1 }}>{notification.message}</span>
 
                     {notification.isLimitError && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                purchaseSlot();
-                            }}
+                        <a
+                            href="/subscription"
+                            onClick={(e) => e.stopPropagation()}
                             className="btn-primary"
                             style={{
                                 padding: '0.3rem 0.8rem',
@@ -102,11 +100,12 @@ const Dashboard = () => {
                                 color: 'var(--danger)',
                                 fontWeight: 'bold',
                                 border: 'none',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                textDecoration: 'none'
                             }}
                         >
-                            Buy Slot
-                        </button>
+                            Upgrade Plan
+                        </a>
                     )}
 
                     <button
@@ -230,6 +229,11 @@ const Dashboard = () => {
                                         <TrendingUp className="text-primary" size={20} /> Today's Top Earners (PnL) <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
                                     </h3>
                                 </a>
+                                <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                                    Slots Used: <span style={{ color: (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 0) ? 'var(--danger)' : 'var(--accent)' }}>
+                                        {settings?.copy_sources?.length || 0} / {settings?.source_slots || 0}
+                                    </span>
+                                </div>
                             </div>
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -247,7 +251,11 @@ const Dashboard = () => {
                                             <tr><td colSpan="5" className="text-center py-8 italic text-muted">Loading leaderboard data...</td></tr>
                                         ) : leaderboard.length === 0 ? (
                                             <tr><td colSpan="5" className="text-center py-8 italic text-muted">No leaderboard data found.</td></tr>
-                                        ) : leaderboard.map((trader, idx) => (
+                                        ) : leaderboard.map((trader, idx) => {
+                                            const isFollowing = settings?.copy_sources?.some(s => s.address?.toLowerCase() === trader.proxyWallet?.toLowerCase());
+                                            const slotsFull = (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 0);
+                                            
+                                            return (
                                             <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.9rem', transition: 'background 0.2s' }} className="hover-row">
                                                 <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>#{idx + 1}</td>
                                                 <td style={{ padding: '0.75rem' }}>
@@ -275,15 +283,16 @@ const Dashboard = () => {
                                                 </td>
                                                 <td style={{ padding: '0.75rem' }}>
                                                     <button
-                                                        className="btn-outline"
-                                                        style={{ padding: '0.2rem 0.8rem', fontSize: '0.75rem' }}
-                                                        onClick={() => handleFollow(trader)}
+                                                        className={isFollowing ? "btn-outline" : (slotsFull ? "btn-outline opacity-50" : "btn-primary")}
+                                                        style={{ padding: '0.2rem 0.8rem', fontSize: '0.75rem', minWidth: '80px' }}
+                                                        onClick={() => !isFollowing && handleFollow(trader)}
+                                                        disabled={isFollowing}
                                                     >
-                                                        Follow
+                                                        {isFollowing ? 'Following' : (slotsFull ? 'Slots Full' : 'Follow')}
                                                     </button>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        )})}
                                     </tbody>
                                 </table>
                             </div>

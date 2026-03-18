@@ -9,9 +9,9 @@ load_dotenv()
 from services.secrets_service import load_secrets
 load_secrets()
 
-from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions
+from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions, config
 from services.stripe_service import verify_webhook
-from services.dynamodb_service import add_user_slot, update_user_subscription
+from services.dynamodb_service import update_user_subscription
 import stripe
 
 app = FastAPI(title="WhaleSync API", version="1.0.0")
@@ -55,6 +55,7 @@ app.include_router(signals.router, prefix="/api/signals", tags=["signals"])
 app.include_router(strategies.router, prefix="/api/strategies", tags=["strategies"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
+app.include_router(config.router, prefix="/api/config", tags=["config"])
 
 @app.post("/api/webhook/stripe")
 async def stripe_webhook(request: Request):
@@ -84,9 +85,7 @@ async def stripe_webhook(request: Request):
                     update_user_subscription(user_id, tier, subscription_id)
                     print(f"SUCCESS: Upgraded user {user_id} to {tier}")
                 else:
-                    # Legacy one-off slot purchase
-                    add_user_slot(user_id)
-                    print(f"SUCCESS: Added slot for user {user_id}")
+                    print(f"WARNING: Ignored checkout completed for non-subscription mode: {mode}")
             except Exception as e:
                 print(f"FAILURE: Could not process checkout for {user_id}: {str(e)}")
         else:

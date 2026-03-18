@@ -29,6 +29,6 @@ def get_status(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     return {
-        "tier": user.get("subscription_tier", "free"),
-        "slots": user.get("source_slots", 1)
+        "tier": user.get("subscription_tier", "pro"),
+        "slots": user.get("source_slots", 10)
     }
