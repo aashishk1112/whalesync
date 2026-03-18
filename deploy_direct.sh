@@ -71,6 +71,8 @@ done
 # Seed Subscription Tiers
 echo "Seeding Subscription Tiers..."
 TIER_TABLE="${PREFIX}-subscription-tiers"
+echo "Waiting for table $TIER_TABLE to be active..."
+aws dynamodb wait table-exists --table-name "$TIER_TABLE" --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "free"}, "name": {"S": "Free"}, "slots": {"N": "1"}, "signal_delay_mins": {"N": "5"}, "ai_suggestions": {"BOOL": false}, "max_capital": {"N": "10000"}}' --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "pro"}, "name": {"S": "Pro"}, "slots": {"N": "10"}, "signal_delay_mins": {"N": "0"}, "ai_suggestions": {"BOOL": true}, "max_capital": {"N": "50000"}}' --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "elite"}, "name": {"S": "Elite"}, "slots": {"N": "1000"}, "signal_delay_mins": {"N": "0"}, "ai_suggestions": {"BOOL": true}, "whale_alerts": {"BOOL": true}, "max_capital": {"N": "250000"}}' --region "$REGION"
