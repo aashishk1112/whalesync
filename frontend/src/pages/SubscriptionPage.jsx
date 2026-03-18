@@ -4,6 +4,8 @@ import { Check, Zap, Crown, ShieldCheck } from 'lucide-react';
 
 const SubscriptionPage = () => {
     const { user } = useContext(AuthContext);
+    const [plans, setPlans] = useState([]);
+    const [isLoadingPlans, setIsLoadingPlans] = useState(true);
     const [loading, setLoading] = useState(null);
 
     const handleUpgrade = async (tier) => {
@@ -29,59 +31,48 @@ const SubscriptionPage = () => {
         }
     };
 
-    const tiers = [
-        {
-            id: 'free',
-            name: 'Free',
-            price: '$0',
-            description: 'Perfect for getting started with WhaleSync',
-            features: [
-                '1 trader follow',
-                'Delayed signals (5 minutes)',
-                'Limited capital simulation ($10k)',
-                'Basic dashboard'
-            ],
-            icon: <Zap size={24} className="text-muted" />,
-            buttonText: 'Current Plan',
-            disabled: true,
-            isCurrent: user?.subscription_tier === 'free' || !user?.subscription_tier
-        },
-        {
-            id: 'pro',
-            name: 'Pro',
-            price: '$20',
-            period: '/mo',
-            description: 'For serious traders seeking real-time precision',
-            features: [
-                '10 trader slots',
-                'Real-time signals',
-                'Portfolio analytics',
-                'Basic AI suggestions',
-                'Up to $50k simulated capital'
-            ],
-            icon: <Crown size={24} style={{ color: '#3b82f6' }} />,
-            buttonText: 'Upgrade to Pro',
-            isCurrent: user?.subscription_tier === 'pro',
-            highlight: true
-        },
-        {
-            id: 'elite',
-            name: 'Elite',
-            price: '$75',
-            period: '/mo',
-            description: 'The ultimate intelligence platform for whales',
-            features: [
-                'Unlimited traders',
-                'AI auto-copy (simulated)',
-                'Whale alerts',
-                'Early signal access',
-                'Up to $250k simulated capital'
-            ],
-            icon: <ShieldCheck size={24} style={{ color: '#10b981' }} />,
-            buttonText: 'Go Elite',
-            isCurrent: user?.subscription_tier === 'elite'
-        }
-    ];
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const res = await fetch(`${apiUrl}/api/config/plans`);
+                const data = await res.json();
+                if (data.plans) {
+                    // Map DB tiers to UI structure
+                    const iconMap = {
+                        free: <Zap size={24} className="text-muted" />,
+                        pro: <Crown size={24} style={{ color: '#3b82f6' }} />,
+                        elite: <ShieldCheck size={24} style={{ color: '#10b981' }} />
+                    };
+                    
+                    const formattedPlans = Object.entries(data.plans).map(([id, plan]) => ({
+                        id,
+                        name: plan.name,
+                        price: plan.price_display || `$${plan.price || 0}`,
+                        period: plan.period || '/mo',
+                        description: plan.description || '',
+                        features: plan.features || [],
+                        icon: iconMap[id] || <Zap size={24} />,
+                        highlight: plan.highlight || false,
+                        buttonText: plan.button_text || (id === 'pro' ? 'Upgrade to Pro' : id === 'elite' ? 'Go Elite' : 'Current Plan'),
+                        isCurrent: user?.subscription_tier === id,
+                        disabled: id === 'free'
+                    }));
+                    
+                    // Sort plans if necessary (e.g. free, pro, elite)
+                    const order = ['free', 'pro', 'elite'];
+                    formattedPlans.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+                    
+                    setPlans(formattedPlans);
+                }
+            } catch (err) {
+                console.error("Failed to fetch plans", err);
+            } finally {
+                setIsLoadingPlans(false);
+            }
+        };
+        fetchPlans();
+    }, [user?.subscription_tier]);
 
     return (
         <div className="container mt-4 animate-fade-in" style={{ paddingBottom: '4rem' }}>
@@ -98,7 +89,12 @@ const SubscriptionPage = () => {
                 gap: '2rem', 
                 marginTop: '2rem' 
             }}>
-                {tiers.map((tier) => (
+                {isLoadingPlans ? (
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem' }}>
+                        <div className="spinner"></div>
+                        <p className="mt-4 text-muted">Loading intelligence tiers...</p>
+                    </div>
+                ) : plans.map((tier) => (
                     <div 
                         key={tier.id} 
                         className={`glass-panel hover-glow ${tier.highlight ? 'animate-float' : ''}`}

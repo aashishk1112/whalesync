@@ -9,7 +9,7 @@ load_dotenv()
 from services.secrets_service import load_secrets
 load_secrets()
 
-from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions
+from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions, config
 from services.stripe_service import verify_webhook
 from services.dynamodb_service import add_user_slot, update_user_subscription
 import stripe
@@ -55,6 +55,7 @@ app.include_router(signals.router, prefix="/api/signals", tags=["signals"])
 app.include_router(strategies.router, prefix="/api/strategies", tags=["strategies"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
+app.include_router(config.router, prefix="/api/config", tags=["config"])
 
 @app.post("/api/webhook/stripe")
 async def stripe_webhook(request: Request):

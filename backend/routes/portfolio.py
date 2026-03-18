@@ -14,7 +14,8 @@ from services.dynamodb_service import (
     wipe_user_data,
     accept_risk_disclosure,
     perform_aml_screening,
-    get_subscription_tier
+    get_subscription_tier,
+    get_system_config
 )
 from services.stripe_service import create_checkout_session
 
@@ -101,7 +102,7 @@ def get_my_portfolio(user_id: str):
             if pnl > 0:
                 wins += 1
             
-    initial_cap = float(db_user.get("simulation_capital", 10000.0))
+    initial_cap = float(db_user.get("simulation_capital", get_system_config().get("default_capital", 50000.0)))
     total_pnl = total_realized_pnl + total_unrealized_pnl
     balance = initial_cap + total_realized_pnl # Simplified: initial - spent + realized
     
@@ -141,8 +142,8 @@ def get_my_portfolio(user_id: str):
     return {
         "portfolio": portfolio,
         "settings": {
-            "simulation_capital": float(db_user.get("simulation_capital", 10000.0)),
-            "source_slots": db_user.get("source_slots", 6),
+            "simulation_capital": float(db_user.get("simulation_capital", get_system_config().get("default_capital", 50000.0))),
+            "source_slots": db_user.get("source_slots", get_subscription_tier(db_user.get("subscription_tier", "pro"))["slots"]),
             "copy_sources": sources,
             "polymarket_address": poly_address,
             "linked_profile": linked_profile
@@ -175,7 +176,7 @@ def add_source(source: SourceUpdate, user_id: str):
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    tier = db_user.get("subscription_tier", "free")
+    tier = db_user.get("subscription_tier", "pro")
     tier_config = get_subscription_tier(tier)
     slots = db_user.get("source_slots", tier_config["slots"])
     current_sources = db_user.get("copy_sources", [])

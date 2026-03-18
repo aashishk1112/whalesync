@@ -245,38 +245,6 @@ const Settings = () => {
                         <p className="text-xs text-muted mt-2">Initial paper trading portfolio available for simulation.</p>
                     </section>
 
-                    <section className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
-                            <ShieldCheck size={20} className="text-primary" /> Subscription Slots
-                        </h3>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                    {settings.copy_sources.filter(s => s.platform === newSource.platform).length} / {2 + Math.max(0, settings.source_slots - 6 - settings.copy_sources.filter(s => s.platform !== newSource.platform && settings.copy_sources.filter(cs => cs.platform === s.platform).indexOf(s) >= 2).length)}
-                                </div>
-                                <div className="text-sm text-muted">{newSource.platform} Slots Used</div>
-                            </div>
-                            <button className="btn-outline" style={{ display: 'flex', gap: '0.5rem' }} onClick={purchaseSlot}>
-                                <Plus size={16} /> Buy Slot ($5)
-                            </button>
-                        </div>
-
-                        <div style={{
-                            height: '6px',
-                            background: 'rgba(255,255,255,0.05)',
-                            borderRadius: '3px',
-                            marginBottom: '1rem',
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{
-                                width: `${Math.min(100, (settings.copy_sources.filter(s => s.platform === newSource.platform).length / (2 + Math.max(0, settings.source_slots - 6))) * 100)}%`,
-                                height: '100%',
-                                background: 'var(--primary)',
-                                transition: 'width 0.3s ease'
-                            }} />
-                        </div>
-
-                    </section>
 
                     <section className="glass-panel" style={{ padding: '1.5rem' }}>
                         <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>

@@ -11,8 +11,8 @@ export const PortfolioProvider = ({ children }) => {
         open_positions: []
     });
     const [settings, setSettings] = useState({
-        simulation_capital: 10000.0,
-        source_slots: 6,
+        simulation_capital: 0,
+        source_slots: 0,
         copy_sources: []
     });
 
@@ -28,6 +28,27 @@ export const PortfolioProvider = ({ children }) => {
             console.error("Failed to fetch portfolio", err);
         }
     }, [user?.user_id]);
+
+    const fetchDefaults = useCallback(async () => {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${apiUrl}/api/config/defaults`);
+            const data = await res.json();
+            if (data) {
+                setSettings(prev => ({
+                    ...prev,
+                    simulation_capital: data.default_capital,
+                    source_slots: data.default_slots
+                }));
+            }
+        } catch (err) {
+            console.error("Failed to fetch system defaults", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDefaults();
+    }, [fetchDefaults]);
 
     useEffect(() => {
         if (user?.user_id) {

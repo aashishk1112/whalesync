@@ -15,6 +15,7 @@ MARKETS_TABLE = os.environ.get("MARKETS_TABLE") or f"{env}-whalesync-markets"
 TRADES_TABLE = os.environ.get("TRADES_TABLE") or f"{env}-whalesync-trades"
 STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or f"{env}-whalesync-strategies"
 SUBSCRIPTION_TIERS_TABLE = os.environ.get("SUBSCRIPTION_TIERS_TABLE") or f"{env}-whalesync-subscription-tiers"
+SYSTEM_TABLE = os.environ.get("SYSTEM_TABLE") or f"{env}-whalesync-system-config"
 
 # Support local DynamoDB (LocalStack) via DYNAMODB_ENDPOINT env var
 _endpoint = os.environ.get("DYNAMODB_ENDPOINT")  # e.g. http://localhost:4566
@@ -32,6 +33,7 @@ markets_table = dynamodb.Table(MARKETS_TABLE)
 trades_table = dynamodb.Table(TRADES_TABLE)
 strategies_table = dynamodb.Table(STRATEGIES_TABLE)
 subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
+system_table = dynamodb.Table(SYSTEM_TABLE)
 
 # --- Subscription Tier Management ---
 _subscription_tiers_cache = {}
@@ -63,21 +65,39 @@ def get_subscription_tiers() -> Dict[str, Any]:
     except Exception as e:
         print(f"[DynamoDB] Error fetching subscription tiers: {e}")
     
-    # Fallback to a minimal "free" tier if DB is empty or fails
-    return {
-        "free": {
-            "name": "Free",
-            "slots": 1,
-            "signal_delay_mins": 5,
-            "ai_suggestions": False,
-            "max_capital": 10000
-        }
-    }
+    return {}
+
+def get_system_config() -> Dict[str, Any]:
+    """Fetch global system configuration from DynamoDB."""
+    try:
+        response = system_table.scan()
+        config = {}
+        for item in response.get('Items', []):
+            key = item.get('config_key')
+            value = item.get('config_value')
+            if key:
+                # Convert Decimals
+                if isinstance(value, Decimal):
+                    if value % 1 == 0:
+                        value = int(value)
+                    else:
+                        value = float(value)
+                config[key] = value
+        return config
+    except Exception as e:
+        print(f"[DynamoDB] Error fetching system config: {e}")
+        return {}
 
 def get_subscription_tier(tier_id: str) -> Dict[str, Any]:
     """Get config for a specific tier."""
     tiers = get_subscription_tiers()
-    return tiers.get(tier_id, tiers.get("free"))
+    # If the tier doesn't exist, we should probably fall back to whatever is defined as default in system config
+    if tier_id in tiers:
+        return tiers[tier_id]
+    
+    config = get_system_config()
+    default_tier_id = config.get("default_tier_id", "pro") # Still need a tiny safety fallback string but aiming for DB
+    return tiers.get(default_tier_id, next(iter(tiers.values())) if tiers else {})
 
 def get_now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -102,16 +122,20 @@ def get_user_by_referral_code(referral_code: str):
 # --- User Ops ---
 def create_user(email: str, username: str, picture_url: Optional[str] = None, referred_by_code: Optional[str] = None) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
-    tier_config = get_subscription_tier("free")
+    
+    config = get_system_config()
+    default_tier_id = config.get("default_tier_id", "pro")
+    tier_config = get_subscription_tier(default_tier_id)
+    
     user_item = {
         "userId": user_id,  # Live schema key
         "user_id": user_id, # Alias for existing code
         "email": email,
         "username": username,
         "picture_url": picture_url,
-        "simulation_capital": Decimal(str(tier_config["max_capital"])), # Default capital from tier
-        "subscription_tier": "free",
-        "source_slots": tier_config["slots"],             
+        "simulation_capital": Decimal(str(tier_config.get("max_capital", config.get("default_capital", 50000)))),
+        "subscription_tier": default_tier_id,
+        "source_slots": tier_config.get("slots", config.get("default_slots", 10)),             
         "copy_sources": [],            # List of followed addresses
         "created_at": get_now_iso()
     }
@@ -163,13 +187,17 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         if "userId" in item: item["user_id"] = item["userId"]
         # Ensure new fields exist for old records
         if "subscription_tier" not in item:
-             item["subscription_tier"] = "free"
+             item["subscription_tier"] = "pro"
         
         tier = item["subscription_tier"]
         tier_config = get_subscription_tier(tier)
 
         if "simulation_capital" not in item: item["simulation_capital"] = Decimal(str(tier_config["max_capital"]))
-        if "source_slots" not in item: item["source_slots"] = tier_config["slots"]
+        if "source_slots" not in item: 
+            item["source_slots"] = tier_config["slots"]
+        else:
+            # Ensure they have at least the tier default (handles tier upgrades/config changes)
+            item["source_slots"] = max(int(item["source_slots"]), tier_config["slots"])
         if "copy_sources" not in item: item["copy_sources"] = []
     return item
 
@@ -259,15 +287,17 @@ def add_user_slot(user_id: str):
             print(f"ERROR [add_user_slot]: User {user_id} not found in database")
             raise Exception(f"User {user_id} not found")
         
-        current_slots = user.get("source_slots", 6)
+        # Use tier default slots if source_slots is missing
+        tier_config = get_subscription_tier(user.get("subscription_tier", "pro"))
+        current_slots = user.get("source_slots", tier_config["slots"])
         print(f"DEBUG [add_user_slot]: Current slots for {user_id}: {current_slots}")
         
         response = users_table.update_item(
             Key={"userId": user_id},
-            UpdateExpression="SET source_slots = if_not_exists(source_slots, :six) + :one",
+            UpdateExpression="SET source_slots = if_not_exists(source_slots, :default_slots) + :one",
             ExpressionAttributeValues={
                 ":one": 1,
-                ":six": 6 # Default is 6 as per schema
+                ":default_slots": tier_config["slots"]
             },
             ReturnValues="UPDATED_NEW"
         )
