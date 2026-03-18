@@ -66,7 +66,12 @@ def google_auth(data: GoogleLogin):
                 "username": db_user.get('username', 'User'), 
                 "email": db_user['email'],
                 "picture_url": db_user.get('picture_url'),
-                "referral_code": db_user.get('referral_code')
+                "referral_code": db_user.get('referral_code'),
+                "subscription_tier": db_user.get('subscription_tier', 'free'),
+                "source_slots": int(db_user.get('source_slots', 0)),
+                "simulation_capital": float(db_user.get('simulation_capital', 0)),
+                "bonus_slots": int(db_user.get('bonus_slots', 0)),
+                "bonus_capital": float(db_user.get('bonus_capital', 0))
             }
         }
     except ValueError as e:
@@ -89,5 +94,10 @@ def get_me(token: str):
         "email": user["email"],
         "username": user.get("username", "User"),
         "picture_url": user.get("picture_url"),
-        "referral_code": user.get("referral_code")
+        "referral_code": user.get("referral_code"),
+        "subscription_tier": user.get("subscription_tier", "free"),
+        "source_slots": int(user.get("source_slots", 0)),
+        "simulation_capital": float(user.get("simulation_capital", 0)),
+        "bonus_slots": int(user.get("bonus_slots", 0)),
+        "bonus_capital": float(user.get("bonus_capital", 0))
     }}

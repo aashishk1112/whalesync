@@ -253,9 +253,20 @@ const Settings = () => {
                         <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>YOUR REFERRAL CODE</div>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '2px', color: 'var(--primary)' }}>{user?.referral_code || '------'}</div>
+                            
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BONUS SLOTS</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>+{settings.bonus_slots || 0}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BONUS CAPITAL</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>+${(settings.bonus_capital || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
                         </div>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                            Share your link and get <strong>+1 trader slot</strong> for every friend who signs up.
+                            Share your link and get <strong>+1 trader slot</strong> and <strong>+$5,000 bonus capital</strong> for every friend who signs up.
                         </p>
                         <button 
                             className="btn-outline" 

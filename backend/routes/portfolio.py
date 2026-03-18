@@ -144,6 +144,8 @@ def get_my_portfolio(user_id: str):
         "settings": {
             "simulation_capital": float(db_user.get("simulation_capital", get_system_config().get("default_capital", 50000.0))),
             "source_slots": db_user.get("source_slots", get_subscription_tier(db_user.get("subscription_tier", "pro"))["slots"]),
+            "bonus_slots": int(db_user.get("bonus_slots", 0)),
+            "bonus_capital": float(db_user.get("bonus_capital", 0)),
             "copy_sources": sources,
             "polymarket_address": poly_address,
             "linked_profile": linked_profile

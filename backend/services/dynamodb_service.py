@@ -136,6 +136,8 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
         "simulation_capital": Decimal(str(tier_config.get("max_capital", config.get("default_capital", 50000)))),
         "subscription_tier": default_tier_id,
         "source_slots": tier_config.get("slots", config.get("default_slots", 10)),             
+        "bonus_slots": 0,
+        "bonus_capital": Decimal("0"),
         "copy_sources": [],            # List of followed addresses
         "created_at": get_now_iso()
     }
@@ -147,7 +149,25 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
         referrer = get_user_by_referral_code(referred_by_code)
         if referrer:
             user_item['referred_by'] = referrer['userId']
-            print(f"User {email} referred by {referrer['email']}.")
+            user_item['simulation_capital'] += Decimal("5000")
+            user_item['bonus_capital'] += Decimal("5000")
+            print(f"User {email} referred by {referrer['email']}. Giving referee +$5000 bonus capital.")
+            
+            # Reward the referrer: +1 slot, +$5000 capital
+            try:
+                users_table.update_item(
+                    Key={"userId": referrer['userId']},
+                    UpdateExpression="SET bonus_slots = if_not_exists(bonus_slots, :zero) + :slot_bonus, bonus_capital = if_not_exists(bonus_capital, :zero_dec) + :cap_bonus, source_slots = if_not_exists(source_slots, :zero) + :slot_bonus, simulation_capital = if_not_exists(simulation_capital, :zero_dec) + :cap_bonus",
+                    ExpressionAttributeValues={
+                        ":zero": 0,
+                        ":zero_dec": Decimal("0"),
+                        ":slot_bonus": 1,
+                        ":cap_bonus": Decimal("5000")
+                    }
+                )
+                print(f"Rewarded referrer {referrer['userId']} with +1 slot and +$5000 capital")
+            except Exception as e:
+                print(f"Failed to reward referrer {referrer['userId']}: {e}")
 
     users_table.put_item(Item=user_item)
     return user_item
@@ -187,25 +207,40 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         tier = item["subscription_tier"]
         tier_config = get_subscription_tier(tier)
 
-        if "simulation_capital" not in item: item["simulation_capital"] = Decimal(str(tier_config["max_capital"]))
+        if "simulation_capital" not in item: 
+            item["simulation_capital"] = Decimal(str(tier_config["max_capital"])) + Decimal(str(item.get("bonus_capital", 0)))
         if "source_slots" not in item: 
-            item["source_slots"] = tier_config["slots"]
+            item["source_slots"] = tier_config["slots"] + int(item.get("bonus_slots", 0))
         else:
-            # Ensure they have at least the tier default (handles tier upgrades/config changes)
-            item["source_slots"] = max(int(item["source_slots"]), tier_config["slots"])
+            # Ensure they have at least the tier default + bonus (handles tier upgrades/config changes)
+            item["source_slots"] = max(int(item["source_slots"]), tier_config["slots"] + int(item.get("bonus_slots", 0)))
+        if "bonus_slots" not in item: item["bonus_slots"] = 0
+        if "bonus_capital" not in item: item["bonus_capital"] = Decimal("0")
         if "copy_sources" not in item: item["copy_sources"] = []
     return item
 
 def update_user_subscription(user_id: str, tier: str, stripe_subscription_id: Optional[str] = None):
-    """Updates user tier and resets slots according to new tier limits."""
+    """Updates user tier and resets slots according to new tier limits (plus earned bonuses)."""
     if tier not in get_subscription_tiers():
         return {"error": "Invalid tier"}
     
     tier_config = get_subscription_tier(tier)
-    update_expr = "SET subscription_tier = :t, source_slots = :s"
+    
+    user = get_user_by_id(user_id)
+    if not user:
+        return {"error": "User not found"}
+        
+    bonus_slots = int(user.get("bonus_slots", 0))
+    bonus_capital = Decimal(str(user.get("bonus_capital", 0)))
+    
+    new_slots = tier_config["slots"] + bonus_slots
+    new_capital = Decimal(str(tier_config["max_capital"])) + bonus_capital
+    
+    update_expr = "SET subscription_tier = :t, source_slots = :s, simulation_capital = :c"
     expr_vals = {
         ":t": tier,
-        ":s": tier_config["slots"]
+        ":s": new_slots,
+        ":c": new_capital
     }
     
     if stripe_subscription_id:
