@@ -15,8 +15,9 @@ if [ "$ENV" == "prod" ] && [ "$CURRENT_BRANCH" != "main" ]; then
     exit 1
 fi
 
-if [ "$ENV" == "dev" ] && [ "$CURRENT_BRANCH" == "main" ]; then
-    echo "ERROR: Development deployment is not allowed from the 'main' branch. Please use a feature branch. Current branch: $CURRENT_BRANCH"
+if [ "$ENV" == "dev" ] && [ "$CURRENT_BRANCH" != "dev" ]; then
+    echo "ERROR: Development deployment is only allowed from the 'dev' branch. Current branch: $CURRENT_BRANCH"
+    echo "Hint: Merge your feature branch into 'dev' before deploying to development."
     exit 1
 fi
 

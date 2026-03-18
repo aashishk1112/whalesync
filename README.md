@@ -54,10 +54,10 @@ We use a **prefixed resource strategy** to ensure complete isolation between env
 ### Deployment Strategy & Branch Segregation
 The `deploy_direct.sh` script enforces a strict branch-to-environment mapping to prevent accidental overrides:
 
-| Environment | Target Branch | CLI Command |
+| Environment | Target Branch | Workflow |
 | :--- | :--- | :--- |
-| **Production** | `main` | `./deploy_direct.sh prod` |
-| **Development** | Feature Branches (non-`main`) | `./deploy_direct.sh dev` |
+| **Production** | `main` | Merge `dev` $\rightarrow$ `main`, then `./deploy_direct.sh prod` |
+| **Development** | `dev` | Merge `feature/*` $\rightarrow$ `dev`, then `./deploy_direct.sh dev` |
 
 The script validates your current Git branch before proceeding with any AWS provisioning.
 
