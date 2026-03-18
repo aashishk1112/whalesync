@@ -16,6 +16,7 @@ TRADES_TABLE = os.environ.get("TRADES_TABLE") or f"{env}-whalesync-trades"
 STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or f"{env}-whalesync-strategies"
 SUBSCRIPTION_TIERS_TABLE = os.environ.get("SUBSCRIPTION_TIERS_TABLE") or f"{env}-whalesync-subscription-tiers"
 SYSTEM_TABLE = os.environ.get("SYSTEM_TABLE") or f"{env}-whalesync-system-config"
+REFERRAL_USAGE_TABLE = os.environ.get("REFERRAL_USAGE_TABLE") or f"{env}-whalesync-referral-usage"
 
 # Support local DynamoDB (LocalStack) via DYNAMODB_ENDPOINT env var
 _endpoint = os.environ.get("DYNAMODB_ENDPOINT")  # e.g. http://localhost:4566
@@ -34,6 +35,7 @@ trades_table = dynamodb.Table(TRADES_TABLE)
 strategies_table = dynamodb.Table(STRATEGIES_TABLE)
 subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
 system_table = dynamodb.Table(SYSTEM_TABLE)
+referral_usage_table = dynamodb.Table(REFERRAL_USAGE_TABLE)
 
 # --- Subscription Tier Management ---
 _subscription_tiers_cache = {}
@@ -148,7 +150,21 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
     if referred_by_code:
         referrer = get_user_by_referral_code(referred_by_code)
         if referrer:
-            user_item['referred_by'] = referrer['userId']
+            # Check for duplicate referral usage
+            try:
+                usage_response = referral_usage_table.get_item(Key={"email": email, "referral_code": referred_by_code})
+                if "Item" in usage_response:
+                    print(f"User {email} has already used referral code {referred_by_code}. Skipping rewards.")
+                    referrer = None # Prevent rewards
+                else:
+                    # Record the usage
+                    referral_usage_table.put_item(Item={"email": email, "referral_code": referred_by_code, "used_at": get_now_iso()})
+            except Exception as e:
+                print(f"Error checking/recording referral usage: {e}")
+                referrer = None # Fail safe skip
+
+            if referrer:
+                user_item['referred_by'] = referrer['userId']
             user_item['simulation_capital'] += Decimal("5000")
             user_item['bonus_capital'] += Decimal("5000")
             print(f"User {email} referred by {referrer['email']}. Giving referee +$5000 bonus capital.")
