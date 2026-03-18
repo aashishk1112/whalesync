@@ -151,9 +151,7 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
             user_item['referred_by'] = referrer['userId']
             user_item['simulation_capital'] += Decimal("5000")
             user_item['bonus_capital'] += Decimal("5000")
-            user_item['source_slots'] += 1
-            user_item['bonus_slots'] += 1
-            print(f"User {email} referred by {referrer['email']}. Giving referee +1 slot and +$5000 bonus capital.")
+            print(f"User {email} referred by {referrer['email']}. Giving referee +$5000 bonus capital.")
             
             # Reward the referrer: +1 slot, +$5000 capital
             try:
