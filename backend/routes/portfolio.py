@@ -14,7 +14,7 @@ from services.dynamodb_service import (
     wipe_user_data,
     accept_risk_disclosure,
     perform_aml_screening,
-    SUBSCRIPTION_TIERS
+    get_subscription_tier
 )
 from services.stripe_service import create_checkout_session
 
@@ -176,7 +176,7 @@ def add_source(source: SourceUpdate, user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
         
     tier = db_user.get("subscription_tier", "free")
-    tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+    tier_config = get_subscription_tier(tier)
     slots = db_user.get("source_slots", tier_config["slots"])
     current_sources = db_user.get("copy_sources", [])
     

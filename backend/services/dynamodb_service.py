@@ -14,6 +14,7 @@ USERS_TABLE = os.environ.get("USERS_TABLE") or f"{env}-whalesync-users"
 MARKETS_TABLE = os.environ.get("MARKETS_TABLE") or f"{env}-whalesync-markets"
 TRADES_TABLE = os.environ.get("TRADES_TABLE") or f"{env}-whalesync-trades"
 STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or f"{env}-whalesync-strategies"
+SUBSCRIPTION_TIERS_TABLE = os.environ.get("SUBSCRIPTION_TIERS_TABLE") or f"{env}-whalesync-subscription-tiers"
 
 # Support local DynamoDB (LocalStack) via DYNAMODB_ENDPOINT env var
 _endpoint = os.environ.get("DYNAMODB_ENDPOINT")  # e.g. http://localhost:4566
@@ -30,32 +31,53 @@ users_table = dynamodb.Table(USERS_TABLE)
 markets_table = dynamodb.Table(MARKETS_TABLE)
 trades_table = dynamodb.Table(TRADES_TABLE)
 strategies_table = dynamodb.Table(STRATEGIES_TABLE)
+subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
 
-# --- Subscription Configurations ---
-SUBSCRIPTION_TIERS = {
-    "free": {
-        "name": "Free",
-        "slots": 1,
-        "signal_delay_mins": 5,
-        "ai_suggestions": False,
-        "max_capital": 10000.0
-    },
-    "pro": {
-        "name": "Pro",
-        "slots": 10,
-        "signal_delay_mins": 0,
-        "ai_suggestions": True,
-        "max_capital": 50000.0
-    },
-    "elite": {
-        "name": "Elite",
-        "slots": 1000, # "Unlimited"
-        "signal_delay_mins": 0,
-        "ai_suggestions": True,
-        "whale_alerts": True,
-        "max_capital": 250000.0
+# --- Subscription Tier Management ---
+_subscription_tiers_cache = {}
+
+def get_subscription_tiers() -> Dict[str, Any]:
+    """Fetch all subscription tiers from DynamoDB with simple caching."""
+    global _subscription_tiers_cache
+    if _subscription_tiers_cache:
+        return _subscription_tiers_cache
+    
+    try:
+        response = subscription_tiers_table.scan()
+        tiers = {}
+        for item in response.get('Items', []):
+            tier_id = item.pop('tier_id')
+            # Convert Decimals back to floats/ints for JSON compatibility
+            for key, value in item.items():
+                if isinstance(value, Decimal):
+                    if value % 1 == 0:
+                        item[key] = int(value)
+                    else:
+                        item[key] = float(value)
+            tiers[tier_id] = item
+        
+        if tiers:
+            print(f"[DynamoDB] Cached {len(tiers)} subscription tiers")
+            _subscription_tiers_cache = tiers
+            return tiers
+    except Exception as e:
+        print(f"[DynamoDB] Error fetching subscription tiers: {e}")
+    
+    # Fallback to a minimal "free" tier if DB is empty or fails
+    return {
+        "free": {
+            "name": "Free",
+            "slots": 1,
+            "signal_delay_mins": 5,
+            "ai_suggestions": False,
+            "max_capital": 10000
+        }
     }
-}
+
+def get_subscription_tier(tier_id: str) -> Dict[str, Any]:
+    """Get config for a specific tier."""
+    tiers = get_subscription_tiers()
+    return tiers.get(tier_id, tiers.get("free"))
 
 def get_now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -80,7 +102,7 @@ def get_user_by_referral_code(referral_code: str):
 # --- User Ops ---
 def create_user(email: str, username: str, picture_url: Optional[str] = None, referred_by_code: Optional[str] = None) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
-    tier_config = SUBSCRIPTION_TIERS["free"]
+    tier_config = get_subscription_tier("free")
     user_item = {
         "userId": user_id,  # Live schema key
         "user_id": user_id, # Alias for existing code
@@ -144,7 +166,7 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
              item["subscription_tier"] = "free"
         
         tier = item["subscription_tier"]
-        tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+        tier_config = get_subscription_tier(tier)
 
         if "simulation_capital" not in item: item["simulation_capital"] = Decimal(str(tier_config["max_capital"]))
         if "source_slots" not in item: item["source_slots"] = tier_config["slots"]
@@ -153,10 +175,10 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
 
 def update_user_subscription(user_id: str, tier: str, stripe_subscription_id: Optional[str] = None):
     """Updates user tier and resets slots according to new tier limits."""
-    if tier not in SUBSCRIPTION_TIERS:
-        raise ValueError(f"Invalid subscription tier: {tier}")
+    if tier not in get_subscription_tiers():
+        return {"error": "Invalid tier"}
     
-    tier_config = SUBSCRIPTION_TIERS[tier]
+    tier_config = get_subscription_tier(tier)
     update_expr = "SET subscription_tier = :t, source_slots = :s"
     expr_vals = {
         ":t": tier,

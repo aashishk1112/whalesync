@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime, timedelta, timezone
-from services.dynamodb_service import get_user_by_id, SUBSCRIPTION_TIERS
+from services.dynamodb_service import get_user_by_id, get_subscription_tier
 
 router = APIRouter()
 
@@ -41,7 +41,7 @@ def get_recent_signals(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
         
     tier = user.get("subscription_tier", "free")
-    tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+    tier_config = get_subscription_tier(tier)
     
     delay_mins = tier_config.get("signal_delay_mins", 0)
     has_whale_alerts = tier_config.get("whale_alerts", False)
