@@ -14,20 +14,25 @@ WhaleSync is a premium, high-performance platform for automated trader copying, 
 ## ✨ Core Features
 
 ### 1. Tiered Subscription Model
+
 A dynamic, database-driven pricing system stored in DynamoDB:
+
 - **Free**: 1 Trader Slot, 5-min Signal Delay, Limited Capital.
 - **Pro**: 10 Trader Slots, Real-time Signals, AI Suggestions.
 - **Elite**: Unlimited Slots, Whale Alerts, Early Signal Access.
 
 ### 2. Referral Engine
+
 - **Reward**: +1 Trader Slot for every successful referral.
 - **Unique Codes**: Every user gets a dedicated referral code and link in their Settings.
 
 ### 3. Intelligence & Analytics
+
 - **Global Leaderboard**: Rank traders by ROI, PNL, and Win Rate with real-time Polymarket data.
 - **Performance Dashboard**: Personal analytics including accuracy, equity growth charts (SVG), and risk metrics.
 
 ### 4. Advanced UI/UX
+
 - **Glassmorphism**: Sleek, modern design with blurred panels and vibrant gradients.
 - **Micro-animations**: Smooth transitions and interactive elements for a premium feel.
 
@@ -48,10 +53,12 @@ A dynamic, database-driven pricing system stored in DynamoDB:
 We use a **prefixed resource strategy** to ensure complete isolation between environments.
 
 ### Environment Separation
+
 - **Dev Resources**: `dev-whalesync-users`, `dev-whalesync-secrets`, etc.
 - **Prod Resources**: `prod-whalesync-users`, `prod-whalesync-secrets`, etc.
 
 ### Deployment Strategy & Branch Segregation
+
 The `deploy_direct.sh` script enforces a strict branch-to-environment mapping to prevent accidental overrides:
 
 | Environment | Target Branch | Workflow |
@@ -62,6 +69,7 @@ The `deploy_direct.sh` script enforces a strict branch-to-environment mapping to
 The script validates your current Git branch before proceeding with any AWS provisioning.
 
 The script handles:
+
 1. DynamoDB table creation & automated seeding (Subscription Tiers).
 2. Secret Manager setup.
 3. Lambda function provisioning with environment-specific variables.
@@ -73,6 +81,7 @@ The script handles:
 ## 💻 Local Development
 
 1. **Backend**:
+
    ```bash
    cd backend
    pip install -r requirements.txt
@@ -81,6 +90,7 @@ The script handles:
    ```
 
 2. **Frontend**:
+
    ```bash
    cd frontend
    npm install
@@ -90,4 +100,5 @@ The script handles:
 ---
 
 ## 📝 License
+
 Proprietary - WhaleSync Team
