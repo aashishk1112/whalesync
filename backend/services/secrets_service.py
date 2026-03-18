@@ -9,7 +9,8 @@ def load_secrets():
         print("[Secrets] Local environment detected, skipping Secrets Manager")
         return
 
-    secret_name = "WhalesyncProdSecrets"
+    env = os.environ.get("ENVIRONMENT", "dev")
+    secret_name = f"{env}-whalesync-secrets"
     region_name = os.environ.get("AWS_REGION", "ap-south-1")
 
     # Create a Secrets Manager client

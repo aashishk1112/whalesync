@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PortfolioContext } from '../context/PortfolioContext';
-import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus } from 'lucide-react';
+import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus, Target } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
     const { portfolio, addSource, purchaseSlot } = useContext(PortfolioContext);
@@ -152,29 +153,43 @@ const Dashboard = () => {
                         <DollarSign size={20} className="text-primary" />
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                        ${portfolio.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${portfolio?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </div>
                 </div>
 
                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
                     <div className="flex justify-between items-center mb-4">
-                        <span className="text-muted text-sm font-medium">Simulated PnL</span>
+                        <span className="text-muted text-sm font-medium">Simulation PnL</span>
                         <TrendingUp size={20} className="text-success" />
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: portfolio.total_pnl >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                        {portfolio.total_pnl >= 0 ? '+' : ''}${portfolio.total_pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: (portfolio?.total_pnl || 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                        {(portfolio?.total_pnl || 0) >= 0 ? '+' : ''}${(portfolio?.total_pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '5px' }}>
+                        {(portfolio?.roi || 0) >= 0 ? '+' : ''}{portfolio?.roi || 0}% ROI
                     </div>
                 </div>
 
                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
                     <div className="flex justify-between items-center mb-4">
-                        <span className="text-muted text-sm font-medium">Open Positions</span>
-                        <Activity size={20} className="text-primary" />
+                        <span className="text-muted text-sm font-medium">Prediction Accuracy</span>
+                        <Target size={20} className="text-primary" />
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                        {portfolio.open_positions?.length || 0}
+                        {portfolio?.accuracy || 0}%
+                    </div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '5px' }}>
+                        {portfolio?.total_resolved || 0} resolved trades
                     </div>
                 </div>
+            </div>
+
+            <div className="flex justify-end mb-6">
+                <Link to="/performance" style={{ textDecoration: 'none' }}>
+                    <button className="btn-outline flex items-center gap-2" style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
+                        View Full Performance Analysis <ArrowUpRight size={14} />
+                    </button>
+                </Link>
             </div>
 
             <div className="dashboard-content">

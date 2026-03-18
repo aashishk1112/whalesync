@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from typing import Optional
 from services.dynamodb_service import get_user_by_email, create_user
 from services.jwt_service import create_access_token
 from google.oauth2 import id_token
@@ -14,6 +15,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID_HERE.app
 
 class GoogleLogin(BaseModel):
     credential: str
+    referral_code: Optional[str] = None
 
 @router.post("/google")
 def google_auth(data: GoogleLogin):
@@ -35,7 +37,7 @@ def google_auth(data: GoogleLogin):
         
         if not db_user:
             # Auto-register if user doesn't exist
-            db_user = create_user(email, first_name, picture)
+            db_user = create_user(email, first_name, picture, data.referral_code)
         else:
             # Update name/picture if missing or default 'User'
             updates = {}
@@ -63,7 +65,8 @@ def google_auth(data: GoogleLogin):
                 "user_id": db_user['user_id'], 
                 "username": db_user.get('username', 'User'), 
                 "email": db_user['email'],
-                "picture_url": db_user.get('picture_url')
+                "picture_url": db_user.get('picture_url'),
+                "referral_code": db_user.get('referral_code')
             }
         }
     except ValueError as e:
@@ -85,5 +88,6 @@ def get_me(token: str):
         "user_id": user["user_id"],
         "email": user["email"],
         "username": user.get("username", "User"),
-        "picture_url": user.get("picture_url")
+        "picture_url": user.get("picture_url"),
+        "referral_code": user.get("referral_code")
     }}

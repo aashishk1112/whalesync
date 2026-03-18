@@ -13,7 +13,8 @@ from services.dynamodb_service import (
     link_user_polymarket_address,
     wipe_user_data,
     accept_risk_disclosure,
-    perform_aml_screening
+    perform_aml_screening,
+    SUBSCRIPTION_TIERS
 )
 from services.stripe_service import create_checkout_session
 
@@ -53,10 +54,12 @@ def get_my_portfolio(user_id: str):
     from services.polymarket_service import polymarket_service
     
     trades = get_user_trades(user_id)
-    open_positions = []
+    total_resolved = 0
+    wins = 0
+    total_invested_resolved = 0.0
     total_realized_pnl = 0.0
     total_unrealized_pnl = 0.0
-    
+    open_positions = []
     market_prices = {} # Cache prices within this request
     
     for t in trades:
@@ -74,7 +77,6 @@ def get_my_portfolio(user_id: str):
             
             pnl = 0.0
             if entry_price > 0:
-                # Unrealized PnL = (Current - Entry) * (Amount / Entry)
                 pnl = (curr_price - entry_price) * (amount / entry_price)
             
             total_unrealized_pnl += pnl
@@ -92,12 +94,35 @@ def get_my_portfolio(user_id: str):
                 "created_at": t["created_at"]
             })
         elif t.get("status") == "resolved":
-            total_realized_pnl += float(t.get("realized_pnl", 0))
+            total_resolved += 1
+            pnl = float(t.get("realized_pnl", 0))
+            total_realized_pnl += pnl
+            total_invested_resolved += float(t.get("amount", 0))
+            if pnl > 0:
+                wins += 1
             
+    initial_cap = float(db_user.get("simulation_capital", 10000.0))
+    total_pnl = total_realized_pnl + total_unrealized_pnl
+    balance = initial_cap + total_realized_pnl # Simplified: initial - spent + realized
+    
+    # Accuracy: Wins / Total Resolved
+    accuracy = (wins / total_resolved * 100) if total_resolved > 0 else 0
+    
+    # ROI: (Total PnL / Initial Capital) * 100
+    roi = (total_pnl / initial_cap * 100) if initial_cap > 0 else 0
+    
+    # Risk Score: (Average Invested / Current Balance) * 10 (Mocked logic)
+    avg_invested = (total_invested_resolved / total_resolved) if total_resolved > 0 else 0
+    risk_score = min(10, (avg_invested / max(1, balance) * 50)) 
+
     portfolio = {
-        "balance": float(db_user.get("simulation_capital", 10000.0)),
-        "total_pnl": round(total_realized_pnl + total_unrealized_pnl, 2),
+        "balance": round(balance, 2),
+        "total_pnl": round(total_pnl, 2),
         "total_unrealized_pnl": round(total_unrealized_pnl, 2),
+        "accuracy": round(accuracy, 1),
+        "roi": round(roi, 2),
+        "risk_score": round(risk_score, 1),
+        "total_resolved": total_resolved,
         "open_positions": open_positions
     }
     
@@ -150,42 +175,22 @@ def add_source(source: SourceUpdate, user_id: str):
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    slots = db_user.get("source_slots", 6)
+    tier = db_user.get("subscription_tier", "free")
+    tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+    slots = db_user.get("source_slots", tier_config["slots"])
     current_sources = db_user.get("copy_sources", [])
     
     # Strict Duplicate Check: Platform + Address
     if any(s['platform'] == source.platform and s['address'] == source.address for s in current_sources):
         raise HTTPException(status_code=400, detail=f"This source ({source.address}) is already being followed on {source.platform}.")
     
-    # Per-Platform Slot Logic:
-    # 1. You get 2 slots per platform for free (Base 6 = 2 Poly + 2 Kalshi + 2 Mani)
-    # 2. To follow more than 2 on any SINGLE platform, you must have purchased extra slots.
-    
-    platform_count = len([s for s in current_sources if s['platform'] == source.platform])
-    
-    if platform_count >= 2:
-        # User wants to follow a 3rd+ person on this platform.
-        # Check if they have unused "Extra" slots (extra = total_slots - 6).
-        total_extra_capacity = max(0, slots - 6)
-        
-        # Calculate how many extra slots are ALREADY being used across ALL platforms
-        extra_used_total = 0
-        platforms = set([s['platform'] for s in current_sources] + [source.platform])
-        for p in platforms:
-            p_count = len([s for s in current_sources if s['platform'] == p])
-            # If we are currently evaluating the platform we are adding to, 
-            # we count its current extra usage.
-            extra_used_total += max(0, p_count - 2)
-            
-        if extra_used_total >= total_extra_capacity:
-            raise HTTPException(
-                status_code=402, 
-                detail=f"You have reached the free limit of 2 followings for {source.platform}. Please purchase an additional slot to follow more on this platform."
-            )
-
-    # Final safeguard: total capacity
+    # Simplified Tier-Based Slot Logic:
+    # We just check the total source_slots allowed for the user's tier
     if len(current_sources) >= slots:
-        raise HTTPException(status_code=402, detail="Total subscription limit reached. Please purchase an additional slot.")
+        raise HTTPException(
+            status_code=402, 
+            detail=f"You have reached your {tier.capitalize()} tier limit of {slots} followings. Please upgrade your subscription to follow more traders."
+        )
 
     image_url = None
     if source.platform == "Polymarket":

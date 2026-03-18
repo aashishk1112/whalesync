@@ -11,9 +11,9 @@ MOCK_TRADERS = [
 ]
 
 @router.get("/leaderboard")
-def get_leaderboard(timeframe: str = "DAY"):
+def get_leaderboard(timeframe: str = "DAY", sort_by: str = "PNL"):
     from services.polymarket_service import polymarket_service
-    traders = polymarket_service.get_leaderboard(timeframe=timeframe)
+    traders = polymarket_service.get_leaderboard(timeframe=timeframe, sort_by=sort_by)
     return {"traders": traders}
 
 @router.get("/{trader_id}")

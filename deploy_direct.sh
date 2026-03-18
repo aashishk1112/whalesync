@@ -2,45 +2,58 @@
 set -e
 
 # Configuration
+ENV=$1
+if [ "$ENV" != "dev" ] && [ "$ENV" != "prod" ]; then
+    echo "Usage: ./deploy_direct.sh [dev|prod]"
+    exit 1
+fi
+
 REGION=$(aws configure get region || echo "us-east-1")
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-PREFIX="whalesync"
+PREFIX="${ENV}-whalesync"
 ROLE_NAME="${PREFIX}-lambda-role"
-SECRET_NAME="WhalesyncProdSecrets"
+SECRET_NAME="${PREFIX}-secrets"
 LAMBDA_NAME="${PREFIX}-backend"
 API_NAME="${PREFIX}-api"
 S3_BUCKET="${PREFIX}-frontend-${ACCOUNT_ID}"
+
+# Environment specific values
+if [ "$ENV" == "dev" ]; then
+    ENV_FILE="backend/.env.development"
+else
+    ENV_FILE="backend/.env.production"
+fi
 
 echo "Starting DIRECT AWS CLI Deployment for WhaleSync..."
 
 # 1. Create DynamoDB Tables
 echo "Checking/Creating DynamoDB Tables..."
-TABLES=("Whalesync-Users" "Whalesync-Markets" "Whalesync-Trades" "Whalesync-Strategies")
+TABLES=("${PREFIX}-users" "${PREFIX}-markets" "${PREFIX}-trades" "${PREFIX}-strategies")
 for TABLE in "${TABLES[@]}"; do
     if aws dynamodb describe-table --table-name "$TABLE" --region "$REGION" > /dev/null 2>&1; then
         echo "Table $TABLE already exists."
     else
         echo "Creating table $TABLE..."
         # Simplified schemas for CLI creation - adding only keys and necessary GSI
-        if [ "$TABLE" == "Whalesync-Users" ]; then
+        if [[ "$TABLE" == *"-users" ]]; then
             aws dynamodb create-table --table-name "$TABLE" \
                 --attribute-definitions AttributeName=userId,AttributeType=S AttributeName=email,AttributeType=S \
                 --key-schema AttributeName=userId,KeyType=HASH \
                 --global-secondary-indexes "IndexName=EmailIndex,KeySchema=[{AttributeName=email,KeyType=HASH}],Projection={ProjectionType=ALL}" \
                 --billing-mode PAY_PER_REQUEST --region "$REGION"
-        elif [ "$TABLE" == "Whalesync-Markets" ]; then
+        elif [[ "$TABLE" == *"-markets" ]]; then
              aws dynamodb create-table --table-name "$TABLE" \
                 --attribute-definitions AttributeName=market_id,AttributeType=S AttributeName=platform,AttributeType=S \
                 --key-schema AttributeName=market_id,KeyType=HASH \
                 --global-secondary-indexes "IndexName=PlatformIndex,KeySchema=[{AttributeName=platform,KeyType=HASH}],Projection={ProjectionType=ALL}" \
                 --billing-mode PAY_PER_REQUEST --region "$REGION"
-        elif [ "$TABLE" == "Whalesync-Trades" ]; then
+        elif [[ "$TABLE" == *"-trades" ]]; then
              aws dynamodb create-table --table-name "$TABLE" \
                 --attribute-definitions AttributeName=trade_id,AttributeType=S AttributeName=user_id,AttributeType=S \
                 --key-schema AttributeName=trade_id,KeyType=HASH \
                 --global-secondary-indexes "IndexName=UserTradesIndex,KeySchema=[{AttributeName=user_id,KeyType=HASH}],Projection={ProjectionType=ALL}" \
                 --billing-mode PAY_PER_REQUEST --region "$REGION"
-        elif [ "$TABLE" == "Whalesync-Strategies" ]; then
+        elif [[ "$TABLE" == *"-strategies" ]]; then
              aws dynamodb create-table --table-name "$TABLE" \
                 --attribute-definitions AttributeName=strategy_id,AttributeType=S AttributeName=user_id,AttributeType=S \
                 --key-schema AttributeName=strategy_id,KeyType=HASH \
@@ -60,9 +73,9 @@ else
         --description "Production secrets for Whalesync" --region "$REGION"
 fi
 
-# Extract values from .env (basic parsing)
+# Extract values from .env.development or .env.production
 get_env_val() {
-    grep "^$1=" backend/.env | cut -d'=' -f2-
+    grep "^$1=" "$ENV_FILE" | cut -d'=' -f2-
 }
 
 SECRET_JSON=$(cat <<EOF
@@ -113,7 +126,7 @@ EOF
                 "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem",
                 "dynamodb:Query", "dynamodb:Scan"
             ],
-            "Resource": "arn:aws:dynamodb:${REGION}:${ACCOUNT_ID}:table/Whalesync-*"
+            "Resource": "arn:aws:dynamodb:${REGION}:${ACCOUNT_ID}:table/${PREFIX}-*"
         },
         {
             "Effect": "Allow",
@@ -162,7 +175,7 @@ else
         --runtime python3.11 --handler main.handler \
         --role "$ROLE_ARN" \
         --code "S3Bucket=$DEPLOY_BUCKET,S3Key=backend.zip" \
-        --environment "Variables={USERS_TABLE=Whalesync-Users,MARKETS_TABLE=Whalesync-Markets,TRADES_TABLE=Whalesync-Trades,STRATEGIES_TABLE=Whalesync-Strategies,MOCK_AUTH=false,PAPER_TRADING=true}" \
+        --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,MOCK_AUTH=false,PAPER_TRADING=true,ENVIRONMENT=$ENV}" \
         --timeout 30 --memory-size 512 --region "$REGION" > /dev/null
 fi
 
@@ -382,9 +395,15 @@ echo "CloudFront Domain: $CF_DOMAIN"
 # 8. Deploy Frontend
 echo "Building Frontend..."
 # Point frontend to CloudFront domain for unified API access
-cat <<EOF > frontend/.env.production
-VITE_API_URL=https://$CF_DOMAIN
-EOF
+if [ "$ENV" == "dev" ]; then
+    cp frontend/.env.development frontend/.env.production
+else
+    cp frontend/.env.production frontend/.env.production
+fi
+# Override VITE_API_URL to use the CloudFront domain if needed, 
+# but for production/integrated build it usually uses /api relative path or $CF_DOMAIN
+# Here we ensure it matches the CF domain for this prefix
+echo "VITE_API_URL=https://$CF_DOMAIN" >> frontend/.env.production
 cd frontend && npm install && npm run build && cd ..
 
 echo "Syncing Frontend to S3..."
@@ -393,9 +412,9 @@ aws s3 sync frontend/dist "s3://$S3_BUCKET" --delete --region "$REGION"
 echo "Invalidating CloudFront cache..."
 aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --region "$REGION" > /dev/null
 
-echo "Updating Lambda environment with production URL..."
+echo "Updating Lambda environment with final configuration..."
 aws lambda update-function-configuration --function-name "$LAMBDA_NAME" \
-    --environment "Variables={USERS_TABLE=Whalesync-Users,MARKETS_TABLE=Whalesync-Markets,TRADES_TABLE=Whalesync-Trades,STRATEGIES_TABLE=Whalesync-Strategies,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN}" --region "$REGION" > /dev/null
+    --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN,ENVIRONMENT=$ENV}" --region "$REGION" > /dev/null
 
 echo "Deployment Complete!"
 echo "Global App URL: https://$CF_DOMAIN"

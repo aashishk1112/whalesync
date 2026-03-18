@@ -8,6 +8,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.global = window;
+      if (typeof window.Buffer === 'undefined') {
+        window.Buffer = {
+          isBuffer: () => false,
+          from: () => ({}),
+          alloc: () => ({}),
+          concat: () => ({})
+        };
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

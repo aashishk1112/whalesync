@@ -55,17 +55,19 @@ class PolymarketService:
             print(f"Error fetching Polymarket profile: {e}")
         return {}
 
-    def get_leaderboard(self, timeframe: str = "DAY", limit: int = 20) -> List[Dict[str, Any]]:
-        """Fetch PnL leaderboard for a specific timeframe (DAY, WEEK, MONTH, ALL)."""
+    def get_leaderboard(self, timeframe: str = "DAY", limit: int = 20, sort_by: str = "PNL") -> List[Dict[str, Any]]:
+        """Fetch leaderboard for a specific timeframe and metric (PNL, ROI, WIN_RATE)."""
         try:
-            # Polymarket Data API for leaderboard
-            # Note: timeframe values are usually uppercase: DAY, WEEK, MONTH, ALL
             period = timeframe.upper()
             if period == "TODAY": period = "DAY"
             if period == "WEEKLY": period = "WEEK"
             if period == "MONTHLY": period = "MONTH"
             
-            res = requests.get(f"https://data-api.polymarket.com/v1/leaderboard?timePeriod={period}&limit={limit}&orderBy=PNL")
+            # Map friendly names to API param names if needed
+            order_by = sort_by.upper()
+            if order_by == "ACCURACY": order_by = "WIN_RATE"
+
+            res = requests.get(f"https://data-api.polymarket.com/v1/leaderboard?timePeriod={period}&limit={limit}&orderBy={order_by}")
             if res.ok:
                 return res.json()
         except Exception as e:

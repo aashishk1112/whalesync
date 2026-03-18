@@ -277,6 +277,30 @@ const Settings = () => {
                         </div>
 
                     </section>
+
+                    <section className="glass-panel" style={{ padding: '1.5rem' }}>
+                        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                            <UserPlus size={20} className="text-primary" /> Referral Program
+                        </h3>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>YOUR REFERRAL CODE</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '2px', color: 'var(--primary)' }}>{user?.referral_code || '------'}</div>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            Share your link and get <strong>+1 trader slot</strong> for every friend who signs up.
+                        </p>
+                        <button 
+                            className="btn-outline" 
+                            style={{ width: '100%', fontSize: '0.85rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }}
+                            onClick={() => {
+                                const link = `${window.location.origin}/login?ref=${user?.referral_code}`;
+                                navigator.clipboard.writeText(link);
+                                setMessage({ type: 'success', text: 'Referral link copied to clipboard!' });
+                            }}
+                        >
+                            Copy Referral Link
+                        </button>
+                    </section>
                 </div>
 
                 {/* Right Column: Copy Sources */}

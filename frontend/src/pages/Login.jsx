@@ -1,17 +1,20 @@
 import React, { useState, useContext } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Activity, Brain, Target, Globe, Zap } from 'lucide-react';
 
 const Login = () => {
     const [error, setError] = useState('');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setError('');
-        const result = await login(credentialResponse.credential);
+        const params = new URLSearchParams(location.search);
+        const ref = params.get('ref');
+        const result = await login(credentialResponse.credential, ref);
         if (result.success) {
             navigate('/');
         } else {

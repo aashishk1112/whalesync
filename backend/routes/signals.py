@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from datetime import datetime, timedelta, timezone
+from services.dynamodb_service import get_user_by_id, SUBSCRIPTION_TIERS
 
 router = APIRouter()
 
@@ -33,5 +35,30 @@ MOCK_SIGNALS = [
 ]
 
 @router.get("/")
-def get_recent_signals():
-    return {"signals": MOCK_SIGNALS}
+def get_recent_signals(user_id: str):
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    tier = user.get("subscription_tier", "free")
+    tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+    
+    delay_mins = tier_config.get("signal_delay_mins", 0)
+    has_whale_alerts = tier_config.get("whale_alerts", False)
+    
+    now = datetime.now(timezone.utc)
+    filtered_signals = []
+    
+    for sig in MOCK_SIGNALS:
+        # 1. Access Check: Whale alerts only for Elite
+        if sig["type"] == "whale_alert" and not has_whale_alerts:
+            continue
+            
+        # 2. Delay Logic
+        sig_time = datetime.fromisoformat(sig["timestamp"].replace("Z", "+00:00"))
+        if now - sig_time < timedelta(minutes=delay_mins):
+            continue
+            
+        filtered_signals.append(sig)
+        
+    return {"signals": filtered_signals, "tier": tier, "delay_mins": delay_mins}

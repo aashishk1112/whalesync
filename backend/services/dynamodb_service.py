@@ -4,13 +4,16 @@ from typing import Dict, Any, List, Optional
 from decimal import Decimal
 from datetime import datetime, timezone
 import uuid
+import random
+import string
 from boto3.dynamodb.conditions import Key, Attr
 
 # In SAM/Lambda environment, table names will be injected via environment variables
-USERS_TABLE = os.environ.get("USERS_TABLE") or os.environ.get("DYNAMODB_TABLE") or "ScalarUsers"
-MARKETS_TABLE = os.environ.get("MARKETS_TABLE") or "Whalesync-Markets"
-TRADES_TABLE = os.environ.get("TRADES_TABLE") or "ScalarTrades"
-STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or "ScalarStrategies"
+env = os.environ.get("ENVIRONMENT", "dev")
+USERS_TABLE = os.environ.get("USERS_TABLE") or f"{env}-whalesync-users"
+MARKETS_TABLE = os.environ.get("MARKETS_TABLE") or f"{env}-whalesync-markets"
+TRADES_TABLE = os.environ.get("TRADES_TABLE") or f"{env}-whalesync-trades"
+STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or f"{env}-whalesync-strategies"
 
 # Support local DynamoDB (LocalStack) via DYNAMODB_ENDPOINT env var
 _endpoint = os.environ.get("DYNAMODB_ENDPOINT")  # e.g. http://localhost:4566
@@ -28,23 +31,83 @@ markets_table = dynamodb.Table(MARKETS_TABLE)
 trades_table = dynamodb.Table(TRADES_TABLE)
 strategies_table = dynamodb.Table(STRATEGIES_TABLE)
 
+# --- Subscription Configurations ---
+SUBSCRIPTION_TIERS = {
+    "free": {
+        "name": "Free",
+        "slots": 1,
+        "signal_delay_mins": 5,
+        "ai_suggestions": False,
+        "max_capital": 10000.0
+    },
+    "pro": {
+        "name": "Pro",
+        "slots": 10,
+        "signal_delay_mins": 0,
+        "ai_suggestions": True,
+        "max_capital": 50000.0
+    },
+    "elite": {
+        "name": "Elite",
+        "slots": 1000, # "Unlimited"
+        "signal_delay_mins": 0,
+        "ai_suggestions": True,
+        "whale_alerts": True,
+        "max_capital": 250000.0
+    }
+}
+
 def get_now_iso():
     return datetime.now(timezone.utc).isoformat()
 
+def generate_referral_code(length=6):
+    """Generate a unique 6-character alphanumeric referral code."""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
+def get_user_by_referral_code(referral_code: str):
+    """Find a user by their unique referral code using scan (or index if available)."""
+    try:
+        # Check for IndexName='ReferralCodeIndex' if you have it, else scan
+        response = users_table.scan(
+            FilterExpression=Attr('referral_code').eq(referral_code)
+        )
+        return response['Items'][0] if response['Items'] else None
+    except Exception as e:
+        print(f"Error fetching user by referral code: {e}")
+        return None
+
 # --- User Ops ---
-def create_user(email: str, username: str, picture_url: str = None) -> Dict[str, Any]:
+def create_user(email: str, username: str, picture_url: Optional[str] = None, referred_by_code: Optional[str] = None) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
+    tier_config = SUBSCRIPTION_TIERS["free"]
     user_item = {
         "userId": user_id,  # Live schema key
         "user_id": user_id, # Alias for existing code
         "email": email,
         "username": username,
         "picture_url": picture_url,
-        "simulation_capital": Decimal("10000.0"), # Default capital
-        "source_slots": 6,             # 2 per platform x 3 platforms
+        "simulation_capital": Decimal(str(tier_config["max_capital"])), # Default capital from tier
+        "subscription_tier": "free",
+        "source_slots": tier_config["slots"],             
         "copy_sources": [],            # List of followed addresses
         "created_at": get_now_iso()
     }
+    
+    # Referral System Logic
+    user_item["referral_code"] = generate_referral_code()
+    
+    if referred_by_code:
+        referrer = get_user_by_referral_code(referred_by_code)
+        if referrer:
+            user_item['referred_by'] = referrer['userId']
+            # Reward the referrer: +1 slot
+            try:
+                add_user_slot(referrer['userId'])
+                print(f"User {email} referred by {referrer['email']}. Referrer rewarded with +1 slot.")
+            except Exception as e:
+                print(f"Failed to reward referrer {referrer['userId']}: {e}")
+
     users_table.put_item(Item=user_item)
     return user_item
 
@@ -77,10 +140,38 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         # Standardize for both codes
         if "userId" in item: item["user_id"] = item["userId"]
         # Ensure new fields exist for old records
-        if "simulation_capital" not in item: item["simulation_capital"] = Decimal("10000.0")
-        if "source_slots" not in item: item["source_slots"] = 6
+        if "subscription_tier" not in item:
+             item["subscription_tier"] = "free"
+        
+        tier = item["subscription_tier"]
+        tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
+
+        if "simulation_capital" not in item: item["simulation_capital"] = Decimal(str(tier_config["max_capital"]))
+        if "source_slots" not in item: item["source_slots"] = tier_config["slots"]
         if "copy_sources" not in item: item["copy_sources"] = []
     return item
+
+def update_user_subscription(user_id: str, tier: str, stripe_subscription_id: Optional[str] = None):
+    """Updates user tier and resets slots according to new tier limits."""
+    if tier not in SUBSCRIPTION_TIERS:
+        raise ValueError(f"Invalid subscription tier: {tier}")
+    
+    tier_config = SUBSCRIPTION_TIERS[tier]
+    update_expr = "SET subscription_tier = :t, source_slots = :s"
+    expr_vals = {
+        ":t": tier,
+        ":s": tier_config["slots"]
+    }
+    
+    if stripe_subscription_id:
+        update_expr += ", stripe_subscription_id = :sid"
+        expr_vals[":sid"] = stripe_subscription_id
+        
+    users_table.update_item(
+        Key={"userId": user_id},
+        UpdateExpression=update_expr,
+        ExpressionAttributeValues=expr_vals
+    )
 
 def update_user_capital(user_id: str, new_capital: float):
     users_table.update_item(
@@ -99,7 +190,7 @@ def add_copy_source(user_id: str, source: Dict[str, Any]):
         }
     )
 
-def link_user_polymarket_address(user_id: str, address: str, creds: Dict[str, str] = None):
+def link_user_polymarket_address(user_id: str, address: str, creds: Optional[Dict[str, str]] = None):
     update_expr = "SET polymarket_address = :a"
     expr_vals = {":a": address}
     
@@ -208,7 +299,7 @@ def create_market(market_data: dict) -> Dict[str, Any]:
     markets_table.put_item(Item=item)
     return item
 
-def list_markets_by_platform(platform: str = None) -> List[Dict[str, Any]]:
+def list_markets_by_platform(platform: Optional[str] = None) -> List[Dict[str, Any]]:
     if platform:
         response = markets_table.query(
             IndexName="PlatformIndex",
@@ -221,7 +312,7 @@ def list_markets_by_platform(platform: str = None) -> List[Dict[str, Any]]:
         return response.get("Items", [])
 
 # --- Trades & Portfolio Ops ---
-def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: str = None) -> Optional[Dict[str, Any]]:
+def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
     # 1. Update Strategy Balance with hard stop if fully depleted
     try:
         strategies_table.update_item(

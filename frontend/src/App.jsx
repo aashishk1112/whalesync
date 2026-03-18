@@ -13,6 +13,8 @@ import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Docs from './pages/Docs';
+import SubscriptionPage from './pages/SubscriptionPage';
+import PerformanceDashboard from './pages/PerformanceDashboard';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Footer from './components/Footer';
 
@@ -46,8 +48,10 @@ const Layout = ({ children }) => {
             {user && (
               <nav className="nav-links">
                 <Link to="/">Dashboard</Link>
-                <Link to="/traders" style={{ opacity: 0.7 }}>Traders <span style={{ fontSize: '0.7rem', verticalAlign: 'top', background: 'var(--primary)', color: 'white', padding: '1px 4px', borderRadius: '4px', marginLeft: '2px' }}>Soon</span></Link>
+                <Link to="/traders">Leaderboard</Link>
+                <Link to="/performance">Performance</Link>
                 <Link to="/simulator">Simulator</Link>
+                <Link to="/subscription">Subscription</Link>
                 <Link to="/settings">Settings</Link>
               </nav>
             )}
@@ -97,7 +101,9 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/traders" element={<ProtectedRoute><Traders /></ProtectedRoute>} />
+                <Route path="/performance" element={<ProtectedRoute><PerformanceDashboard /></ProtectedRoute>} />
                 <Route path="/simulator" element={<ProtectedRoute><Simulator /></ProtectedRoute>} />
+                <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />

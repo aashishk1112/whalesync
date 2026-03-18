@@ -17,13 +17,13 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (credential) => {
+  const login = async (credential, referralCode = null) => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential })
+        body: JSON.stringify({ credential, referral_code: referralCode })
       });
 
       const data = await res.json();
