@@ -4,7 +4,7 @@ import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlu
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-    const { portfolio, settings, addSource, purchaseSlot } = useContext(PortfolioContext);
+    const { portfolio, settings, addSource } = useContext(PortfolioContext);
     const [signals, setSignals] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [activeTab, setActiveTab] = useState('Polymarket');
@@ -89,11 +89,9 @@ const Dashboard = () => {
                     <span style={{ fontWeight: 500, flex: 1 }}>{notification.message}</span>
 
                     {notification.isLimitError && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                purchaseSlot();
-                            }}
+                        <a
+                            href="/subscription"
+                            onClick={(e) => e.stopPropagation()}
                             className="btn-primary"
                             style={{
                                 padding: '0.3rem 0.8rem',
@@ -102,11 +100,12 @@ const Dashboard = () => {
                                 color: 'var(--danger)',
                                 fontWeight: 'bold',
                                 border: 'none',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                textDecoration: 'none'
                             }}
                         >
-                            Buy Slot
-                        </button>
+                            Upgrade Plan
+                        </a>
                     )}
 
                     <button

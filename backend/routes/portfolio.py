@@ -311,13 +311,6 @@ def wipe_data(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/purchase-slot")
-def purchase_slot(user_id: str):
-    checkout_url = create_checkout_session(user_id)
-    if not checkout_url:
-        raise HTTPException(status_code=500, detail="Failed to create checkout session")
-    return {"checkout_url": checkout_url}
-
 @router.post("/simulate_trade")
 def simulate_trade(trade: CopyTradeRequest, user_id: str = "test_user_1"):
     db_user = get_user_by_id(user_id)

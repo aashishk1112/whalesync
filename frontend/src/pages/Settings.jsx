@@ -7,7 +7,7 @@ import { ClobClient } from '@polymarket/clob-client';
 import RiskDisclosureModal from '../components/RiskDisclosureModal';
 
 const Settings = () => {
-    const { settings, updateCapital, addSource, purchaseSlot, toggleSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
+    const { settings, updateCapital, addSource, toggleSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
     const { logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('paper');
     const [capital, setCapital] = useState(settings.simulation_capital);
@@ -24,15 +24,15 @@ const Settings = () => {
     useEffect(() => {
         setCapital(settings.simulation_capital);
 
-        // Check for success/canceled query params from Stripe
+        // Check for success/canceled query params from Stripe (subscriptions)
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('success')) {
-            setMessage({ type: 'success', text: 'Slot purchase initiated! Updating your limits shortly...' });
+            setMessage({ type: 'success', text: 'Transaction successful! Updating your limits shortly...' });
 
             // Wait 3 seconds for webhook to process before refreshing
             const refreshTimer = setTimeout(() => {
                 refreshPortfolio();
-                setMessage({ type: 'success', text: 'Slot purchased successfully! Your limits have been updated.' });
+                setMessage({ type: 'success', text: 'Limits updated successfully.' });
                 // Clean up URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }, 3000);
@@ -176,13 +176,13 @@ const Settings = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <span>{message.text}</span>
                         {message.isLimitError && (
-                            <button
-                                onClick={purchaseSlot}
+                            <a
+                                href="/subscription"
                                 className="btn-primary"
-                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', whiteSpace: 'nowrap', textDecoration: 'none' }}
                             >
-                                <Plus size={14} style={{ marginRight: '4px' }} /> Buy Slot ($5)
-                            </button>
+                                <Plus size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Upgrade Plan
+                            </a>
                         )}
                     </div>
                     <button

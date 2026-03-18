@@ -146,19 +146,6 @@ export const PortfolioProvider = ({ children }) => {
         return { success: false };
     };
 
-    const purchaseSlot = async () => {
-        try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/purchase-slot/?user_id=${user.user_id}`, {
-                method: 'POST'
-            });
-            const data = await res.json();
-            if (res.ok && data.checkout_url) {
-                window.location.href = data.checkout_url;
-            }
-        } catch (err) { console.error(err); }
-    };
-
     const linkPolymarket = async (address, creds = null) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -212,7 +199,6 @@ export const PortfolioProvider = ({ children }) => {
         addSource,
         toggleSource,
         terminateSource,
-        purchaseSlot,
         linkPolymarket,
         wipeUserData,
         acceptDisclosure

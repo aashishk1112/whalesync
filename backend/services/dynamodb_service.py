@@ -147,12 +147,7 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
         referrer = get_user_by_referral_code(referred_by_code)
         if referrer:
             user_item['referred_by'] = referrer['userId']
-            # Reward the referrer: +1 slot
-            try:
-                add_user_slot(referrer['userId'])
-                print(f"User {email} referred by {referrer['email']}. Referrer rewarded with +1 slot.")
-            except Exception as e:
-                print(f"Failed to reward referrer {referrer['userId']}: {e}")
+            print(f"User {email} referred by {referrer['email']}.")
 
     users_table.put_item(Item=user_item)
     return user_item
@@ -278,36 +273,6 @@ def perform_aml_screening(address: str) -> Dict[str, Any]:
     
     return {"status": "clear", "risk_score": 0.01}
 
-def add_user_slot(user_id: str):
-    print(f"DEBUG [add_user_slot]: Start for userId={user_id}")
-    try:
-        # First, let's verify if the user exists and what their current slots are
-        user = get_user_by_id(user_id)
-        if not user:
-            print(f"ERROR [add_user_slot]: User {user_id} not found in database")
-            raise Exception(f"User {user_id} not found")
-        
-        # Use tier default slots if source_slots is missing
-        tier_config = get_subscription_tier(user.get("subscription_tier", "pro"))
-        current_slots = user.get("source_slots", tier_config["slots"])
-        print(f"DEBUG [add_user_slot]: Current slots for {user_id}: {current_slots}")
-        
-        response = users_table.update_item(
-            Key={"userId": user_id},
-            UpdateExpression="SET source_slots = if_not_exists(source_slots, :default_slots) + :one",
-            ExpressionAttributeValues={
-                ":one": 1,
-                ":default_slots": tier_config["slots"]
-            },
-            ReturnValues="UPDATED_NEW"
-        )
-        new_slots = response.get('Attributes', {}).get('source_slots')
-        print(f"DEBUG [add_user_slot]: Successfully incremented. New slots: {new_slots}")
-    except Exception as e:
-        print(f"CRITICAL ERROR [add_user_slot]: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise e
 
 def update_copy_source_status(user_id: str, source_id: str, active: bool):
     user = get_user_by_id(user_id)
