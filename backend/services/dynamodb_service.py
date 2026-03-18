@@ -96,7 +96,7 @@ def get_subscription_tier(tier_id: str) -> Dict[str, Any]:
         return tiers[tier_id]
     
     config = get_system_config()
-    default_tier_id = config.get("default_tier_id", "pro") # Still need a tiny safety fallback string but aiming for DB
+    default_tier_id = config.get("default_tier_id", "free") # Free should be the default fallback
     return tiers.get(default_tier_id, next(iter(tiers.values())) if tiers else {})
 
 def get_now_iso():
@@ -124,7 +124,7 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
     user_id = str(uuid.uuid4())
     
     config = get_system_config()
-    default_tier_id = config.get("default_tier_id", "pro")
+    default_tier_id = config.get("default_tier_id", "free")
     tier_config = get_subscription_tier(default_tier_id)
     
     user_item = {
@@ -151,7 +151,9 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
             user_item['referred_by'] = referrer['userId']
             user_item['simulation_capital'] += Decimal("5000")
             user_item['bonus_capital'] += Decimal("5000")
-            print(f"User {email} referred by {referrer['email']}. Giving referee +$5000 bonus capital.")
+            user_item['source_slots'] += 1
+            user_item['bonus_slots'] += 1
+            print(f"User {email} referred by {referrer['email']}. Giving referee +1 slot and +$5000 bonus capital.")
             
             # Reward the referrer: +1 slot, +$5000 capital
             try:
