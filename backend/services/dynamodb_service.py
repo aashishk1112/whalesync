@@ -165,25 +165,25 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
 
             if referrer:
                 user_item['referred_by'] = referrer['userId']
-            user_item['simulation_capital'] += Decimal("5000")
-            user_item['bonus_capital'] += Decimal("5000")
-            print(f"User {email} referred by {referrer['email']}. Giving referee +$5000 bonus capital.")
-            
-            # Reward the referrer: +1 slot, +$5000 capital
-            try:
-                users_table.update_item(
-                    Key={"userId": referrer['userId']},
-                    UpdateExpression="SET bonus_slots = if_not_exists(bonus_slots, :zero) + :slot_bonus, bonus_capital = if_not_exists(bonus_capital, :zero_dec) + :cap_bonus, source_slots = if_not_exists(source_slots, :zero) + :slot_bonus, simulation_capital = if_not_exists(simulation_capital, :zero_dec) + :cap_bonus",
-                    ExpressionAttributeValues={
-                        ":zero": 0,
-                        ":zero_dec": Decimal("0"),
-                        ":slot_bonus": 1,
-                        ":cap_bonus": Decimal("5000")
-                    }
-                )
-                print(f"Rewarded referrer {referrer['userId']} with +1 slot and +$5000 capital")
-            except Exception as e:
-                print(f"Failed to reward referrer {referrer['userId']}: {e}")
+                user_item['simulation_capital'] += Decimal("5000")
+                user_item['bonus_capital'] += Decimal("5000")
+                print(f"User {email} referred by {referrer.get('email', 'Unknown')}. Giving referee +$5000 bonus capital.")
+                
+                # Reward the referrer: +1 slot, +$5000 capital
+                try:
+                    users_table.update_item(
+                        Key={"userId": referrer['userId']},
+                        UpdateExpression="SET bonus_slots = if_not_exists(bonus_slots, :zero) + :slot_bonus, bonus_capital = if_not_exists(bonus_capital, :zero_dec) + :cap_bonus, source_slots = if_not_exists(source_slots, :zero) + :slot_bonus, simulation_capital = if_not_exists(simulation_capital, :zero_dec) + :cap_bonus",
+                        ExpressionAttributeValues={
+                            ":zero": 0,
+                            ":zero_dec": Decimal("0"),
+                            ":slot_bonus": 1,
+                            ":cap_bonus": Decimal("5000")
+                        }
+                    )
+                    print(f"Rewarded referrer {referrer['userId']} with +1 slot and +$5000 capital")
+                except Exception as e:
+                    print(f"Failed to reward referrer {referrer['userId']}: {e}")
 
     users_table.put_item(Item=user_item)
     return user_item

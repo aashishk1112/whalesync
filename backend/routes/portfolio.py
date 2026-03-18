@@ -110,20 +110,20 @@ def get_my_portfolio(user_id: str):
     accuracy = (wins / total_resolved * 100) if total_resolved > 0 else 0
     
     # ROI: (Total PnL / Initial Capital) * 100
-    roi = (total_pnl / initial_cap * 100) if initial_cap > 0 else 0
+    roi = (float(total_pnl) / float(initial_cap) * 100.0) if initial_cap > 0 else 0.0
     
     # Risk Score: (Average Invested / Current Balance) * 10 (Mocked logic)
-    avg_invested = (total_invested_resolved / total_resolved) if total_resolved > 0 else 0
-    risk_score = min(10, (avg_invested / max(1, balance) * 50)) 
+    avg_invested = (float(total_invested_resolved) / float(total_resolved)) if total_resolved > 0 else 0.0
+    risk_score = min(10.0, (avg_invested / max(1.0, float(balance)) * 50.0)) 
 
     portfolio = {
-        "balance": round(balance, 2),
-        "total_pnl": round(total_pnl, 2),
-        "total_unrealized_pnl": round(total_unrealized_pnl, 2),
-        "accuracy": round(accuracy, 1),
-        "roi": round(roi, 2),
-        "risk_score": round(risk_score, 1),
-        "total_resolved": total_resolved,
+        "balance": float(round(balance, 2)),
+        "total_pnl": float(round(total_pnl, 2)),
+        "total_unrealized_pnl": float(round(total_unrealized_pnl, 2)),
+        "accuracy": float(round(accuracy, 1)),
+        "roi": float(round(roi, 2)),
+        "risk_score": float(round(risk_score, 1)),
+        "total_resolved": int(total_resolved),
         "open_positions": open_positions
     }
     
@@ -334,33 +334,7 @@ def simulate_trade(trade: CopyTradeRequest, user_id: str = "test_user_1"):
 
     return {"message": "Trade simulated successfully", "trade": trade_item}
 
-# Mock market resolution
-@router.post("/resolve_market")
-def resolve_market(market_id: str, winning_side: str, user_id: str = "test_user_1"):
-    if user_id not in SIMULATED_PORTFOLIOS:
-         raise HTTPException(status_code=404, detail="Portfolio not found")
-         
-    portfolio = SIMULATED_PORTFOLIOS[user_id]
-    
-    to_remove = []
-    realized_pnl = 0
-    
-    for pos in portfolio["open_positions"]:
-        if pos["market_id"] == market_id:
-            if pos["side"] == winning_side:
-                # Won! Payout depends on entry odds. Simplistic: amount / odds
-                payout = pos["amount_invested"] / pos["entry_price"]
-                profit = payout - pos["amount_invested"]
-                realized_pnl += profit
-                portfolio["balance"] += payout
-            else:
-                # Lost
-                realized_pnl -= pos["amount_invested"]
-            to_remove.append(pos)
-            
-    for pos in to_remove:
-        portfolio["open_positions"].remove(pos)
-        
-    portfolio["total_pnl"] += realized_pnl
-    
-    return {"message": f"Market resolved. Realized PnL: {realized_pnl}", "portfolio": portfolio}
+    return {"message": "Trade simulated successfully", "trade": trade_item}
+
+# resolve_market endpoint removed as it used outdated mock memory-only portfolios. 
+# Market resolution is handled by the background worker.
