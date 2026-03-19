@@ -50,10 +50,12 @@ const Leaderboard = () => {
                             key={tf}
                             className={`btn-outline ${timeframe === tf ? 'active' : ''}`}
                             style={{ 
-                                padding: '0.4rem 1rem', 
-                                fontSize: '0.75rem',
+                                padding: '0.25rem 0.6rem', 
+                                fontSize: '0.65rem',
+                                minWidth: '60px',
                                 borderColor: timeframe === tf ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-                                background: timeframe === tf ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                                background: timeframe === tf ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                borderRadius: '4px'
                             }}
                             onClick={() => setTimeframe(tf)}
                         >
@@ -63,26 +65,32 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <TrendingUp className="text-primary mb-3" />
-                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Top {timeframe} ROI</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
-                        {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0%'}
+            <div className="grid grid-cols-3 gap-4 mb-12">
+                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp size={16} className="text-primary" />
+                        <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOP {timeframe} ROI</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0.0%'}
                     </p>
                 </div>
-                <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <Target className="text-success mb-3" />
-                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Highest Accuracy</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
-                        {traders.length > 0 ? `${(Math.max(...traders.map(t => t.win_rate || 0)) * 100).toFixed(1)}%` : '0%'}
+                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Target size={16} className="text-success" />
+                        <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">AVG ACCURACY</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {traders.length > 0 ? `${(traders.reduce((acc, t) => acc + (t.win_rate || 0), 0) / traders.length * 100).toFixed(1)}%` : '0.0%'}
                     </p>
                 </div>
-                <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <Shield className="text-accent mb-3" />
-                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Total {timeframe} Volume</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
-                        {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0) / (traders.length || 1))}
+                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Shield size={16} className="text-accent" />
+                        <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOTAL VOLUME</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0))}
                     </p>
                 </div>
             </div>

@@ -77,19 +77,15 @@ class PolymarketService:
                     pnl = float(t.get("pnl", 0))
                     vol = float(t.get("vol", 1))
                     
-                    # Derive ROI: Assume capital used is roughly 20% of volume (typical churn)
-                    # or just use PNL/Vol if we want a "pittance" ROI. 
-                    safe_vol_cap = vol * 0.2
-                    if safe_vol_cap < 1000.0: safe_vol_cap = 1000.0
-                    roi = (pnl / safe_vol_cap) * 100.0
+                    # ROI: Use PNL / Volume as a realistic proxy for performance efficiency
+                    roi = (pnl / max(100.0, vol)) * 100.0
                     
-                    # Derive Win Rate: Correlate with PNL/Vol ratio
-                    # Base 50% + some variance based on performance
-                    perf_ratio = pnl / max(1.0, vol)
-                    wr_adj = perf_ratio * 5.0
-                    if wr_adj > 0.4: wr_adj = 0.4
-                    if wr_adj < -0.4: wr_adj = -0.4
-                    win_rate = 0.5 + wr_adj
+                    # Win Rate: Derived from PNL/Vol, centered around 55%
+                    # Better traders usually have PNL > 10% of Volume
+                    perf_score = pnl / max(1.0, vol)
+                    win_rate = 0.55 + (perf_score * 0.2)
+                    if win_rate > 0.95: win_rate = 0.95 # Cap win rate
+                    if win_rate < 0.30: win_rate = 0.30 # Floor win rate
                     
                     processed_traders.append({
                         "rank": t.get("rank"),
