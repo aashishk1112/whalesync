@@ -43,7 +43,7 @@ echo "Starting DIRECT AWS CLI Deployment for WhaleSync..."
 
 # 1. Create DynamoDB Tables
 echo "Checking/Creating DynamoDB Tables..."
-TABLES=("${PREFIX}-users" "${PREFIX}-markets" "${PREFIX}-trades" "${PREFIX}-strategies" "${PREFIX}-subscription-tiers" "${PREFIX}-referral-usage")
+TABLES=("${PREFIX}-users" "${PREFIX}-markets" "${PREFIX}-trades" "${PREFIX}-strategies" "${PREFIX}-subscription-tiers" "${PREFIX}-referral-usage" "${PREFIX}-system-config")
 for TABLE in "${TABLES[@]}"; do
     if aws dynamodb describe-table --table-name "$TABLE" --region "$REGION" > /dev/null 2>&1; then
         echo "Table $TABLE already exists."
@@ -84,6 +84,11 @@ for TABLE in "${TABLES[@]}"; do
                 --attribute-definitions AttributeName=email,AttributeType=S AttributeName=referral_code,AttributeType=S \
                 --key-schema AttributeName=email,KeyType=HASH AttributeName=referral_code,KeyType=RANGE \
                 --billing-mode PAY_PER_REQUEST --region "$REGION"
+        elif [[ "$TABLE" == *"-system-config" ]]; then
+             aws dynamodb create-table --table-name "$TABLE" \
+                --attribute-definitions AttributeName=config_key,AttributeType=S \
+                --key-schema AttributeName=config_key,KeyType=HASH \
+                --billing-mode PAY_PER_REQUEST --region "$REGION"
         fi
     fi
 done
@@ -96,6 +101,15 @@ aws dynamodb wait table-exists --table-name "$TIER_TABLE" --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "free"}, "name": {"S": "Free"}, "price": {"N": "0"}, "price_display": {"S": "$0"}, "description": {"S": "Perfect for getting started with WhaleSync"}, "features": {"L": [{"S": "1 trader follow"}, {"S": "Delayed signals (5 minutes)"}, {"S": "Limited capital simulation ($10k)"}, {"S": "Basic dashboard"}]}, "slots": {"N": "1"}, "signal_delay_mins": {"N": "5"}, "ai_suggestions": {"BOOL": false}, "max_capital": {"N": "10000"}}' --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "pro"}, "name": {"S": "Pro"}, "price": {"N": "20"}, "price_display": {"S": "$20"}, "description": {"S": "For serious traders seeking real-time precision"}, "features": {"L": [{"S": "10 trader slots"}, {"S": "Real-time signals"}, {"S": "Portfolio analytics"}, {"S": "Basic AI suggestions"}, {"S": "Up to $50k simulated capital"}]}, "highlight": {"BOOL": true}, "slots": {"N": "10"}, "signal_delay_mins": {"N": "0"}, "ai_suggestions": {"BOOL": true}, "max_capital": {"N": "50000"}}' --region "$REGION"
 aws dynamodb put-item --table-name "$TIER_TABLE" --item '{"tier_id": {"S": "elite"}, "name": {"S": "Elite"}, "price": {"N": "75"}, "price_display": {"S": "$75"}, "description": {"S": "The ultimate intelligence platform for whales"}, "features": {"L": [{"S": "Unlimited traders"}, {"S": "AI auto-copy (simulated)"}, {"S": "Whale alerts"}, {"S": "Early signal access"}, {"S": "Up to $250k simulated capital"}]}, "slots": {"N": "1000"}, "signal_delay_mins": {"N": "0"}, "ai_suggestions": {"BOOL": true}, "whale_alerts": {"BOOL": true}, "max_capital": {"N": "250000"}}' --region "$REGION"
+
+# Seed System Config
+echo "Seeding System Config..."
+CONFIG_TABLE="${PREFIX}-system-config"
+aws dynamodb wait table-exists --table-name "$CONFIG_TABLE" --region "$REGION"
+aws dynamodb put-item --table-name "$CONFIG_TABLE" --item '{"config_key": {"S": "default_capital"}, "config_value": {"N": "50000"}}' --region "$REGION"
+aws dynamodb put-item --table-name "$CONFIG_TABLE" --item '{"config_key": {"S": "default_tier_id"}, "config_value": {"S": "free"}}' --region "$REGION"
+aws dynamodb put-item --table-name "$CONFIG_TABLE" --item '{"config_key": {"S": "default_slots"}, "config_value": {"N": "1"}}' --region "$REGION"
+
 
 # 2. Setup Secrets Manager
 echo "Checking Secrets Manager..."
@@ -209,7 +223,7 @@ else
         --runtime python3.11 --handler main.handler \
         --role "$ROLE_ARN" \
         --code "S3Bucket=$DEPLOY_BUCKET,S3Key=backend.zip" \
-        --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,MOCK_AUTH=false,PAPER_TRADING=true,ENVIRONMENT=$ENV}" \
+        --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,MOCK_AUTH=false,PAPER_TRADING=true,ENVIRONMENT=$ENV}" \
         --timeout 30 --memory-size 512 --region "$REGION" > /dev/null
 fi
 
@@ -446,7 +460,7 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --r
 
 echo "Updating Lambda environment with final configuration..."
 aws lambda update-function-configuration --function-name "$LAMBDA_NAME" \
-    --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN,ENVIRONMENT=$ENV}" --region "$REGION" > /dev/null
+    --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN,ENVIRONMENT=$ENV}" --region "$REGION" > /dev/null
 
 echo "Deployment Complete!"
 echo "Global App URL: https://$CF_DOMAIN"

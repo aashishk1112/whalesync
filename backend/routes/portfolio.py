@@ -117,12 +117,12 @@ def get_my_portfolio(user_id: str):
     risk_score = min(10.0, (avg_invested / max(1.0, float(balance)) * 50.0)) 
 
     portfolio = {
-        "balance": float(round(balance, 2)),
-        "total_pnl": float(round(total_pnl, 2)),
-        "total_unrealized_pnl": float(round(total_unrealized_pnl, 2)),
-        "accuracy": float(round(accuracy, 1)),
-        "roi": float(round(roi, 2)),
-        "risk_score": float(round(risk_score, 1)),
+        "balance": float(f"{balance:.2f}"),
+        "total_pnl": float(f"{total_pnl:.2f}"),
+        "total_unrealized_pnl": float(f"{total_unrealized_pnl:.2f}"),
+        "accuracy": float(f"{accuracy:.1f}"),
+        "roi": float(f"{roi:.2f}"),
+        "risk_score": float(f"{risk_score:.1f}"),
         "total_resolved": int(total_resolved),
         "open_positions": open_positions
     }

@@ -164,9 +164,13 @@ def create_user(email: str, username: str, picture_url: Optional[str] = None, re
                 referrer = None # Fail safe skip
 
             if referrer:
-                user_item['referred_by'] = referrer['userId']
-                user_item['simulation_capital'] += Decimal("5000")
-                user_item['bonus_capital'] += Decimal("5000")
+                user_id_ref = referrer.get('userId')
+                if user_id_ref:
+                    user_item['referred_by'] = user_id_ref
+                
+                # Use explicit assignment to avoid linter type inference issues with +=
+                user_item['simulation_capital'] = Decimal(str(user_item['simulation_capital'])) + Decimal("5000")
+                user_item['bonus_capital'] = Decimal(str(user_item['bonus_capital'])) + Decimal("5000")
                 print(f"User {email} referred by {referrer.get('email', 'Unknown')}. Giving referee +$5000 bonus capital.")
                 
                 # Reward the referrer: +1 slot, +$5000 capital
@@ -288,7 +292,7 @@ def add_copy_source(user_id: str, source: Dict[str, Any]):
 
 def link_user_polymarket_address(user_id: str, address: str, creds: Optional[Dict[str, str]] = None):
     update_expr = "SET polymarket_address = :a"
-    expr_vals = {":a": address}
+    expr_vals: Dict[str, Any] = {":a": address}
     
     if creds:
         update_expr += ", polymarket_creds = :c"
