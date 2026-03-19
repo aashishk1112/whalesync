@@ -238,7 +238,8 @@ const Leaderboard = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     address: trader.address,
-                    username: trader.username || 'Anonymous'
+                    username: trader.username || 'Anonymous',
+                    risk_mode: 'Balanced'
                 })
             });
 
