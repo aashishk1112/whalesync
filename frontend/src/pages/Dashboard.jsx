@@ -25,6 +25,7 @@ const Dashboard = () => {
         // Fetch daily leaderboard
         setIsLoadingLeaderboard(true);
         fetch(`${apiUrl}/api/markets/leaderboard?limit=10`)
+            .then(res => res.json())
             .then(data => {
                 setLeaderboard(data.leaderboard || data.traders || []);
                 setIsLoadingLeaderboard(false);
