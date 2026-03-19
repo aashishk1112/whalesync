@@ -66,9 +66,40 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="order-2 md:order-1 flex-1 glass-panel w-full" style={{ padding: 0, overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '0.75rem 1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp size={14} className="text-primary" />
+                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">TOP {timeframe} ROI</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0.0%'}
+                    </p>
+                </div>
+                
+                <div className="glass-panel animate-fade-in stagger-2" style={{ padding: '0.75rem 1rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Target size={14} className="text-success" />
+                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">AVG ACCURACY</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {traders.length > 0 ? `${(traders.reduce((acc, t) => acc + (t.win_rate || 0), 0) / traders.length * 100).toFixed(1)}%` : '0.0%'}
+                    </p>
+                </div>
+
+                <div className="glass-panel animate-fade-in stagger-3" style={{ padding: '0.75rem 1rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Shield size={14} className="text-accent" />
+                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">TOTAL VOLUME</h4>
+                    </div>
+                    <p style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white' }}>
+                        {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0))}
+                    </p>
+                </div>
+            </div>
+
+            <div className="glass-panel w-full" style={{ padding: 0, overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                 <th style={{ padding: '1.25rem', textAlign: 'left', fontWeight: '800' }}>RANK</th>
@@ -175,39 +206,6 @@ const Leaderboard = () => {
                             )}
                         </tbody>
                     </table>
-                </div>
-
-                <div className="order-1 md:order-2 w-full md:w-[280px] space-y-4">
-                    <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <TrendingUp size={16} className="text-primary" />
-                            <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOP {timeframe} ROI</h4>
-                        </div>
-                        <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                            {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0.0%'}
-                        </p>
-                    </div>
-                    
-                    <div className="glass-panel animate-fade-in stagger-2" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Target size={16} className="text-success" />
-                            <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">AVG ACCURACY</h4>
-                        </div>
-                        <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                            {traders.length > 0 ? `${(traders.reduce((acc, t) => acc + (t.win_rate || 0), 0) / traders.length * 100).toFixed(1)}%` : '0.0%'}
-                        </p>
-                    </div>
-
-                    <div className="glass-panel animate-fade-in stagger-3" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Shield size={16} className="text-accent" />
-                            <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOTAL VOLUME</h4>
-                        </div>
-                        <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                            {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0))}
-                        </p>
-                    </div>
-                </div>
             </div>
 
             <div className="mt-8 flex items-center gap-2 text-xs text-muted">
