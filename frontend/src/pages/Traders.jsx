@@ -66,18 +66,24 @@ const Leaderboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <TrendingUp className="text-primary mb-3" />
-                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Top ROI</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>145.2%</p>
+                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Top {timeframe} ROI</h4>
+                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
+                        {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0%'}
+                    </p>
                 </div>
                 <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <Target className="text-success mb-3" />
                     <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Highest Accuracy</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>89.4%</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
+                        {traders.length > 0 ? `${(Math.max(...traders.map(t => t.win_rate || 0)) * 100).toFixed(1)}%` : '0%'}
+                    </p>
                 </div>
                 <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <Shield className="text-accent mb-3" />
-                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Best Risk Score</h4>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>1.2</p>
+                    <h4 className="text-muted uppercase text-xs font-bold tracking-wider mb-1">Total {timeframe} Volume</h4>
+                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>
+                        {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0) / (traders.length || 1))}
+                    </p>
                 </div>
             </div>
 
@@ -138,24 +144,28 @@ const Leaderboard = () => {
                                             fontSize: '0.7rem',
                                             fontWeight: '800'
                                         }}>
-                                            {idx + 1}
+                                            {trader.rank || idx + 1}
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.25rem' }}>
                                         <div className="flex items-center gap-3">
-                                            <div style={{ 
-                                                width: '32px', 
-                                                height: '32px', 
-                                                borderRadius: '50%', 
-                                                background: 'linear-gradient(45deg, var(--primary), var(--accent))',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                {trader.username ? trader.username[0].toUpperCase() : (trader.address ? trader.address[0].toUpperCase() : 'W')}
-                                            </div>
+                                            {trader.profile_image ? (
+                                                <img src={trader.profile_image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                                            ) : (
+                                                <div style={{ 
+                                                    width: '32px', 
+                                                    height: '32px', 
+                                                    borderRadius: '50%', 
+                                                    background: 'linear-gradient(45deg, var(--primary), var(--accent))',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {trader.username ? trader.username[0].toUpperCase() : 'W'}
+                                                </div>
+                                            )}
                                             <div>
                                                 <p style={{ margin: 0, fontWeight: '700' }}>{trader.username || 'Anonymous Whale'}</p>
                                                 <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.5 }}>{trader.address ? `${trader.address.slice(0, 6)}...${trader.address.slice(-4)}` : '0x...'}</p>
