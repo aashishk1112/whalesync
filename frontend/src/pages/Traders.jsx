@@ -66,8 +66,8 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8 items-start">
-                <div className="order-2 lg:order-1 glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+                <div className="order-2 md:order-1 flex-1 glass-panel w-full" style={{ padding: 0, overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -177,7 +177,7 @@ const Leaderboard = () => {
                     </table>
                 </div>
 
-                <div className="order-1 lg:order-2 space-y-4">
+                <div className="order-1 md:order-2 w-full md:w-[280px] space-y-4">
                     <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                         <div className="flex items-center gap-2 mb-2">
                             <TrendingUp size={16} className="text-primary" />
