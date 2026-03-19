@@ -46,11 +46,12 @@ class MetricsEngine:
         # Normalize volume for scoring (log scale for whales)
         volume_score = min(1.0, np.log10(max(1.0, volume)) / 7.0) # 10M = 1.0
         
+        # Increased weights for ROI and Win Rate to better differentiate top traders
         score = (
-            min(2.0, adjusted_roi) * 0.3 + # Cap ROI contribution for stability
-            win_rate * 0.2 +
-            volume_score * 0.2 +
-            consistency_score * 0.2 +
+            min(0.25, adjusted_roi) / 0.25 * 0.4 + # Scaled: 25% ROI = 0.4 contribution
+            win_rate * 0.25 +
+            volume_score * 0.15 +
+            consistency_score * 0.1 +
             (1.0 - max_drawdown) * 0.1
         )
         return float(min(100.0, max(0.0, score * 100.0)))

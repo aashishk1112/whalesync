@@ -116,6 +116,9 @@ def get_my_portfolio(user_id: str):
     avg_invested = (float(total_invested_resolved) / float(total_resolved)) if total_resolved > 0 else 0.0
     risk_score = min(10.0, (avg_invested / max(1.0, float(balance)) * 50.0)) 
 
+    # Global Rank (Phase 6)
+    global_rank = polymarket_service.calculate_global_rank(roi)
+    
     portfolio = {
         "balance": float(f"{balance:.2f}"),
         "total_pnl": float(f"{total_pnl:.2f}"),
@@ -123,6 +126,7 @@ def get_my_portfolio(user_id: str):
         "accuracy": float(f"{accuracy:.1f}"),
         "roi": float(f"{roi:.2f}"),
         "risk_score": float(f"{risk_score:.1f}"),
+        "global_rank": global_rank,
         "total_resolved": int(total_resolved),
         "open_positions": open_positions
     }

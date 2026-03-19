@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 import uuid
-from typing import List, Optional, Dict, Any
+import asyncio
+import json
+from typing import List, Optional, Dict, Any, Set
 from services.dynamodb_service import (
     create_strategy as db_create_strategy,
     get_user_strategies,
@@ -78,39 +80,39 @@ def get_strategies(user_id: str):
                                     trade_allowed = True
                                     print(f"Category match: {market_cat} for strategy {s['name']}")
                             
-                                if trade_allowed:
-                                    # Calculate trade amount based on strategy-specific bet size
-                                    strategy_balance = float(s.get("strategy_balance", 0))
-                                    initial_alloc = float(s.get("initial_allocation_dollars", 1000.0))
-                                    bet_percentage = float(s.get("bet_size_percentage", 5.0))
-                                    
-                                    trade_amount = (bet_percentage / 100.0) * initial_alloc
-                                    
-                                    # Risk Mode Adjustment (Conservative: smaller trades, Aggressive: larger trades)
-                                    risk_mode = s.get("risk_mode", "Balanced")
-                                    if risk_mode == "Conservative": trade_amount *= 0.5
-                                    elif risk_mode == "Aggressive": trade_amount *= 1.5
+                            if trade_allowed:
+                                # Calculate trade amount based on strategy-specific bet size
+                                strategy_balance = float(s.get("strategy_balance", 0))
+                                initial_alloc = float(s.get("initial_allocation_dollars", 1000.0))
+                                bet_percentage = float(s.get("bet_size_percentage", 5.0))
+                                
+                                trade_amount = (bet_percentage / 100.0) * initial_alloc
+                                
+                                # Risk Mode Adjustment (Conservative: smaller trades, Aggressive: larger trades)
+                                risk_mode = s.get("risk_mode", "Balanced")
+                                if risk_mode == "Conservative": trade_amount *= 0.5
+                                elif risk_mode == "Aggressive": trade_amount *= 1.5
 
-                                    # Hard Stop: If trade amount > remaining strategy balance, do not execute
-                                    if trade_amount > strategy_balance:
-                                        print(f"STOPPED trade for strategy {s['name']}: Not enough strategy balance")
-                                        continue
+                                # Hard Stop: If trade amount > remaining strategy balance, do not execute
+                                if trade_amount > strategy_balance:
+                                    print(f"STOPPED trade for strategy {s['name']}: Not enough strategy balance")
+                                    continue
 
-                                    # Mirror this trade into our simulator
-                                    side = str(rt.get("side") or "").upper()
-                                    new_trade = record_trade(
-                                        user_id=user_id,
-                                        strategy_id=s["strategy_id"],
-                                        market_id=market_id,
-                                        position="YES" if side == "BUY" else "NO",
-                                        price=float(rt.get("price", 0.5)),
-                                        amount=trade_amount,
-                                        category=s.get("category", "All"),
-                                        tx_hash=tx_hash
-                                    )
-                                    if new_trade:
-                                        strategy_trades.append(new_trade)
-                                        s["strategy_balance"] = float(s["strategy_balance"]) - trade_amount
+                                # Mirror this trade into our simulator
+                                side = str(rt.get("side") or "").upper()
+                                new_trade = record_trade(
+                                    user_id=user_id,
+                                    strategy_id=s["strategy_id"],
+                                    market_id=market_id,
+                                    position="YES" if side == "BUY" else "NO",
+                                    price=float(rt.get("price", 0.5)),
+                                    amount=trade_amount,
+                                    category=s.get("category", "All"),
+                                    tx_hash=tx_hash
+                                )
+                                if new_trade:
+                                    strategy_trades.append(new_trade)
+                                    s["strategy_balance"] = float(s["strategy_balance"]) - trade_amount
                 except Exception as e:
                     print(f"Sync error for {addr}: {e}")
 
@@ -277,3 +279,52 @@ def run_backtest(strategy: StrategyCreate):
             {"day": 90, "value": 12450}
         ]
     }
+# WebSocket Manager for Real-time Strategy Updates
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = set()
+        self.active_connections[user_id].add(websocket)
+
+    def disconnect(self, websocket: WebSocket, user_id: str):
+        if user_id in self.active_connections:
+            self.active_connections[user_id].discard(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast_user_update(self, user_id: str, data: dict):
+        if user_id in self.active_connections:
+            message = json.dumps(data)
+            for connection in self.active_connections[user_id]:
+                await connection.send_text(message)
+
+manager = ConnectionManager()
+
+@router.websocket("/ws/{user_id}")
+async def strategy_websocket(websocket: WebSocket, user_id: str):
+    await manager.connect(websocket, user_id)
+    try:
+        # Initial push: get current strategies
+        data = get_strategies(user_id)
+        await websocket.send_text(json.dumps(data))
+        
+        # Keep alive and handle incoming (if any)
+        while True:
+            # Periodically push updates every 5 seconds for simulation feel
+            await asyncio.sleep(5)
+            data = get_strategies(user_id)
+            await websocket.send_text(json.dumps(data))
+            
+            # Use this loop to listen for client messages if needed
+            # For now, just a passive push
+            # await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+    except Exception as e:
+        print(f"WebSocket Error for {user_id}: {e}")
+        manager.disconnect(websocket, user_id)

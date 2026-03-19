@@ -3,6 +3,30 @@ import { Play, Square, Settings, Activity, ChevronDown, Check, X, TrendingUp, Us
 import { PortfolioContext } from '../context/PortfolioContext';
 import { AuthContext } from '../context/AuthContext';
 
+const Sparkline = ({ data, color = 'var(--primary)', height = 30, width = 100 }) => {
+    if (!data || data.length < 2) return null;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const points = data.map((d, i) => ({
+        x: (i / (data.length - 1)) * width,
+        y: height - ((d - min) / range) * height
+    }));
+    const pathData = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+    return (
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+            <path d={pathData} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={`${pathData} L ${width},${height} L 0,${height} Z`} fill={`url(#gradient-${color.replace(/[^a-zA-Z0-0]/g, '')})`} opacity="0.1" />
+            <defs>
+                <linearGradient id={`gradient-${color.replace(/[^a-zA-Z0-0]/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} />
+                    <stop offset="100%" stopColor="transparent" />
+                </linearGradient>
+            </defs>
+        </svg>
+    );
+};
+
 const Simulator = () => {
     const { user } = useContext(AuthContext);
     const { portfolio, settings, refreshPortfolio } = useContext(PortfolioContext);
@@ -81,20 +105,37 @@ const Simulator = () => {
     useEffect(() => {
         if (!user) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const wsUrl = apiUrl.replace('http', 'ws');
 
         const fetchData = () => {
             fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`)
                 .then(res => res.json())
                 .then(data => setStrategies(data.strategies || []))
                 .catch(err => console.error(err));
-
-            // Also refresh global portfolio to catch automated trades
             refreshPortfolio();
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 30000); // refresh every 30s
-        return () => clearInterval(interval);
+
+        // WebSocket for Real-time Updates (Phase 6)
+        const socket = new WebSocket(`${wsUrl}/api/strategies/ws/${user.user_id}`);
+        
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.strategies) {
+                    console.log("WebSocket Sync:", data.strategies.length, "strategies");
+                    setStrategies(data.strategies);
+                }
+            } catch (err) {
+                console.error("WebSocket Msg Error:", err);
+            }
+        };
+
+        socket.onopen = () => console.log("Strategy WebSocket Connected");
+        socket.onclose = () => console.log("Strategy WebSocket Disconnected");
+
+        return () => socket.close();
     }, [user, refreshPortfolio]);
 
     useEffect(() => {
@@ -409,19 +450,21 @@ const Simulator = () => {
     }, [newStrat.selectedSources, newStrat.riskMode, newStrat.allocation, newStrat.betSizePercentage]);
 
     const StatCard = ({ title, value, trend, icon: Icon }) => (
-        <div className="glass-panel" style={{ padding: '1.25rem', flex: 1, minWidth: '220px', borderLeft: '3px solid var(--primary)' }}>
-            <div className="flex justify-between items-start mb-2">
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.5rem', borderRadius: '8px' }}>
-                    <Icon size={18} className="text-primary" />
+        <div className="glass-panel hover-glow" style={{ padding: '1.5rem', flex: 1, minWidth: '240px', background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(255,255,255,0.02) 100%)' }}>
+            <div className="flex justify-between items-start mb-4">
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.6rem', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <Icon size={20} className="text-primary" />
                 </div>
                 {trend && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: trend.startsWith('+') ? 'var(--success)' : 'var(--danger)', background: trend.startsWith('+') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                        {trend}
-                    </span>
+                    <div className="flex flex-col items-end">
+                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: trend.startsWith('+') ? 'var(--accent)' : 'var(--danger)', background: trend.startsWith('+') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '6px', border: trend.startsWith('+') ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)' }}>
+                            {trend}
+                        </span>
+                    </div>
                 )}
             </div>
-            <div className="text-muted text-[10px] font-black uppercase tracking-widest mb-1">{title}</div>
-            <div className="text-2xl font-black text-white">{value}</div>
+            <div className="text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">{title}</div>
+            <div className="text-3xl font-black text-white text-gradient">{value}</div>
         </div>
     );
 
@@ -463,9 +506,9 @@ const Simulator = () => {
                     </h2>
                     <p className="text-muted text-xs font-bold uppercase tracking-widest">AI-Powered Copy Trading Command Center</p>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted bg-white/5 py-1.5 px-3 rounded-full border border-white/5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                    LIVE NETWORK STATUS: OPTIMAL
+                <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-muted bg-white/5 py-2 px-4 rounded-full border border-white/10 glass-panel">
+                    <div className="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                    LIVE NETWORK STATUS: <span className="text-accent">OPTIMAL</span>
                 </div>
             </div>
 
@@ -666,9 +709,17 @@ const Simulator = () => {
                         ) : (
                             <div className="space-y-8 animate-fade-in">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-black/40 rounded-xl border border-white/5">
+                                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 relative overflow-hidden group">
                                         <div className="text-[9px] font-black text-muted uppercase mb-1">Expected 7D PnL</div>
                                         <div className="text-2xl font-black text-success">+${previewData.expected_pnl_7d}</div>
+                                        <div className="absolute right-2 bottom-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                                            <Sparkline 
+                                                data={[100, 150, 130, 180, 220, 210, previewData.expected_pnl_7d + 200]} 
+                                                color="var(--accent)" 
+                                                width={60} 
+                                                height={20} 
+                                            />
+                                        </div>
                                     </div>
                                     <div className="p-4 bg-black/40 rounded-xl border border-white/5">
                                         <div className="text-[9px] font-black text-muted uppercase mb-1">Win Rate</div>
@@ -731,19 +782,22 @@ const Simulator = () => {
 
             {/* Section 4: Gamification & Rank */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className="glass-panel text-center p-6 border-b-2 border-accent/20">
-                    <div className="text-[9px] font-black text-muted uppercase mb-2">Global Strategy Rank</div>
-                    <div className="text-3xl font-black text-white">#124</div>
-                    <div className="text-[10px] font-bold text-accent">Top 8% Performance</div>
+                <div className="glass-panel text-center p-8 border-b-2 border-primary/20 hover-glow">
+                    <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3 opacity-60">Global Strategy Rank</div>
+                    <div className="text-4xl font-black text-white text-gradient mb-2">#{portfolio.global_rank || '1,284'}</div>
+                    <div className="text-[10px] font-bold text-primary flex items-center justify-center gap-1.5">
+                        <Zap size={10} fill="currentColor" /> 
+                        {portfolio.global_rank < 100 ? 'Top 1% Elite' : portfolio.global_rank < 500 ? 'Top 5% Performance' : 'Global Participant'}
+                    </div>
                 </div>
-                <div className="glass-panel text-center p-6 border-b-2 border-success/20">
-                    <div className="text-[9px] font-black text-muted uppercase mb-2">Weekly Goal</div>
-                    <div className="text-3xl font-black text-white">84%</div>
-                    <div className="text-[10px] font-bold text-success">+$240 / +$400 Target</div>
+                <div className="glass-panel text-center p-8 border-b-2 border-accent/20 hover-glow">
+                    <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3 opacity-60">Weekly Goal</div>
+                    <div className="text-4xl font-black text-white text-gradient mb-2">{Math.min(100, Math.round((portfolio.total_pnl / 400) * 100))}%</div>
+                    <div className="text-[10px] font-bold text-accent">${portfolio.total_pnl.toFixed(0)} / $400 Target</div>
                 </div>
-                <div className="glass-panel text-center p-6 border-b-2 border-primary/20">
-                    <div className="text-[9px] font-black text-muted uppercase mb-2">Win Streak</div>
-                    <div className="text-3xl font-black text-white">🔂 3</div>
+                <div className="glass-panel text-center p-8 border-b-2 border-primary/20 hover-glow">
+                    <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3 opacity-60">Win Streak</div>
+                    <div className="text-4xl font-black text-white text-gradient mb-2">🔂 {portfolio.accuracy > 70 ? '5+' : '3'}</div>
                     <div className="text-[10px] font-bold text-primary">Consecutive Accurate Signals</div>
                 </div>
             </div>
