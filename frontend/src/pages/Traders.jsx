@@ -66,7 +66,7 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-6 mt-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
                 <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '0.75rem 1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <div className="flex items-center gap-2 mb-1">
                         <TrendingUp size={14} className="text-primary" />
