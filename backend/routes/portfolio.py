@@ -55,13 +55,13 @@ def get_my_portfolio(user_id: str):
     from services.polymarket_service import polymarket_service
     
     trades = get_user_trades(user_id)
-    total_resolved = 0
-    wins = 0
-    total_invested_resolved = 0.0
-    total_realized_pnl = 0.0
-    total_unrealized_pnl = 0.0
-    open_positions = []
-    market_prices = {} # Cache prices within this request
+    total_resolved: int = 0
+    wins: int = 0
+    total_invested_resolved: float = 0.0
+    total_realized_pnl: float = 0.0
+    total_unrealized_pnl: float = 0.0
+    open_positions: List[Dict[str, Any]] = []
+    market_prices: Dict[str, float] = {} # Cache prices within this request
     
     for t in trades:
         if t.get("status") == "open":
