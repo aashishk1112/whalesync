@@ -23,6 +23,10 @@ class StrategyCreate(BaseModel):
     category: str = "All" # Optional category for filtering
     is_live: bool = False # Flag for live market interaction
 
+class MirrorRequest(BaseModel):
+    address: str
+    username: str
+
 @router.get("/")
 def get_strategies(user_id: str):
     from services.dynamodb_service import get_strategy_trades
@@ -138,6 +142,20 @@ def create_strategy(strategy: StrategyCreate, user_id: str):
     # Filter for active strategies and ensure we exclude the one we might be editing (though this is POST)
     active_total = sum(float(s.get("allocation_percentage") or 0) for s in strategies if (s.get("status") in ["active", "paused", "stopped"]))
     
+    # Check slot limits
+    db_user = get_user_by_id(user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    source_slots = int(db_user.get("source_slots", 10))
+    current_count = len(strategies)
+    
+    if current_count >= source_slots:
+        raise HTTPException(
+            status_code=403, 
+            detail="SLOTS_FULL"
+        )
+
     if active_total + strategy.allocation_percentage > 100:
         raise HTTPException(
             status_code=400, 
@@ -192,6 +210,56 @@ def create_strategy(strategy: StrategyCreate, user_id: str):
             print(f"Non-critical error in initial simulation: {e}")
 
     return {"message": "Strategy created", "strategy": new_strategy}
+
+@router.post("/mirror")
+def mirror_trader(request: MirrorRequest, user_id: str):
+    """One-click mirroring of a trader from the leaderboard."""
+    print(f"Mirroring trader {request.username} ({request.address}) for user {user_id}")
+    
+    # 1. Check limits
+    db_user = get_user_by_id(user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    strategies = get_user_strategies(user_id)
+    source_slots = int(db_user.get("source_slots", 10))
+    
+    if len(strategies) >= source_slots:
+        raise HTTPException(status_code=403, detail="SLOTS_FULL")
+        
+    # 2. Check overlap (don't mirror same address twice)
+    for s in strategies:
+        if request.address in s.get("source_addresses", []):
+            raise HTTPException(status_code=400, detail="ALREADY_FOLLOWING")
+
+    # 3. Calculate allocation (default 10%, or whatever is left)
+    active_total = sum(float(s.get("allocation_percentage") or 0) for s in strategies)
+    allowance = min(10.0, 100.0 - active_total)
+    
+    if allowance < 1.0:
+        raise HTTPException(status_code=400, detail="INSUFFICIENT_ALLOCATION_BUDGET")
+
+    # 4. Create strategy
+    strat_id = str(uuid.uuid4())
+    new_strategy = {
+        "strategy_id": strat_id,
+        "name": f"Mirror: {request.username}",
+        "platform": "Polymarket",
+        "allocation_percentage": allowance,
+        "bet_size_percentage": 5.0, # Default simulator pattern
+        "source_addresses": [request.address],
+        "category": "All",
+        "is_live": False,
+        "status": "active",
+        "simulated_pnl": 0.0
+    }
+    
+    try:
+        db_create_strategy(user_id, new_strategy)
+        return {"message": "Mirror strategy created", "strategy": new_strategy}
+    except Exception as e:
+        print(f"Mirror error: {e}")
+        raise HTTPException(status_code=500, detail="FAILED_TO_CREATE_MIRROR")
 
 @router.get("/{strategy_id}/trades")
 def get_strategy_trades(strategy_id: str):

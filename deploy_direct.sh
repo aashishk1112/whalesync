@@ -43,7 +43,7 @@ echo "Starting DIRECT AWS CLI Deployment for WhaleSync..."
 
 # 1. Create DynamoDB Tables
 echo "Checking/Creating DynamoDB Tables..."
-TABLES=("${PREFIX}-users" "${PREFIX}-markets" "${PREFIX}-trades" "${PREFIX}-strategies" "${PREFIX}-subscription-tiers" "${PREFIX}-referral-usage" "${PREFIX}-system-config")
+TABLES=("${PREFIX}-users" "${PREFIX}-markets" "${PREFIX}-trades" "${PREFIX}-strategies" "${PREFIX}-subscription-tiers" "${PREFIX}-referral-usage" "${PREFIX}-system-config" "${PREFIX}-leaderboard-snapshots")
 for TABLE in "${TABLES[@]}"; do
     if aws dynamodb describe-table --table-name "$TABLE" --region "$REGION" > /dev/null 2>&1; then
         echo "Table $TABLE already exists."
@@ -88,6 +88,11 @@ for TABLE in "${TABLES[@]}"; do
              aws dynamodb create-table --table-name "$TABLE" \
                 --attribute-definitions AttributeName=config_key,AttributeType=S \
                 --key-schema AttributeName=config_key,KeyType=HASH \
+                --billing-mode PAY_PER_REQUEST --region "$REGION"
+        elif [[ "$TABLE" == *"-leaderboard-snapshots" ]]; then
+             aws dynamodb create-table --table-name "$TABLE" \
+                --attribute-definitions AttributeName=snapshot_date,AttributeType=S AttributeName=timeframe,AttributeType=S \
+                --key-schema AttributeName=snapshot_date,KeyType=HASH AttributeName=timeframe,KeyType=RANGE \
                 --billing-mode PAY_PER_REQUEST --region "$REGION"
         fi
     fi
@@ -223,7 +228,7 @@ else
         --runtime python3.11 --handler main.handler \
         --role "$ROLE_ARN" \
         --code "S3Bucket=$DEPLOY_BUCKET,S3Key=backend.zip" \
-        --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,MOCK_AUTH=false,PAPER_TRADING=true,ENVIRONMENT=$ENV}" \
+        --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,LEADERBOARD_TABLE=${PREFIX}-leaderboard-snapshots,MOCK_AUTH=false,PAPER_TRADING=true,ENVIRONMENT=$ENV}" \
         --timeout 30 --memory-size 512 --region "$REGION" > /dev/null
 fi
 
@@ -460,7 +465,7 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --r
 
 echo "Updating Lambda environment with final configuration..."
 aws lambda update-function-configuration --function-name "$LAMBDA_NAME" \
-    --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN,ENVIRONMENT=$ENV}" --region "$REGION" > /dev/null
+    --environment "Variables={USERS_TABLE=${PREFIX}-users,MARKETS_TABLE=${PREFIX}-markets,TRADES_TABLE=${PREFIX}-trades,STRATEGIES_TABLE=${PREFIX}-strategies,SUBSCRIPTION_TIERS_TABLE=${PREFIX}-subscription-tiers,REFERRAL_USAGE_TABLE=${PREFIX}-referral-usage,SYSTEM_TABLE=${PREFIX}-system-config,LEADERBOARD_TABLE=${PREFIX}-leaderboard-snapshots,MOCK_AUTH=false,PAPER_TRADING=true,FRONTEND_URL=https://$CF_DOMAIN,ENVIRONMENT=$ENV}" --region "$REGION" > /dev/null
 
 echo "Deployment Complete!"
 echo "Global App URL: https://$CF_DOMAIN"
