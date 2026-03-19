@@ -210,7 +210,7 @@ const Simulator = () => {
                                         gap: '0.25rem',
                                         border: '1px solid rgba(59, 130, 246, 0.3)'
                                     }}>
-                                        {src?.name || addr.substring(0, 6)}
+                                        {src?.name || (addr || '').substring(0, 6)}
                                         <X size={12} onClick={(e) => { e.stopPropagation(); onToggle(addr); }} style={{ cursor: 'pointer' }} />
                                     </div>
                                 );
@@ -272,7 +272,7 @@ const Simulator = () => {
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>{s.name}</div>
-                                        <div className="text-xs text-muted">{s.address.substring(0, 10)}...</div>
+                                        <div className="text-xs text-muted">{(s.address || '').substring(0, 10)}...</div>
                                     </div>
                                 </div>
                             ))
@@ -382,7 +382,7 @@ const Simulator = () => {
                                             <td style={{ padding: '1rem 0.5rem', color: 'var(--text-muted)' }}>
                                                 {new Date(t.created_at).toLocaleTimeString()}
                                             </td>
-                                            <td style={{ padding: '1rem 0.5rem' }}>{t.market_id.substring(0, 10)}...</td>
+                                            <td style={{ padding: '1rem 0.5rem' }}>{(t.market_id || '').substring(0, 10)}...</td>
                                             <td style={{ padding: '1rem 0.5rem' }}>
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                                                     {t.category || 'All'}

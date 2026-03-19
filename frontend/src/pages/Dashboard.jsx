@@ -21,10 +21,9 @@ const Dashboard = () => {
 
         // Fetch daily leaderboard
         setIsLoadingLeaderboard(true);
-        fetch(`${apiUrl}/api/markets/leaderboard/?limit=10`)
-            .then(res => res.json())
+        fetch(`${apiUrl}/api/markets/leaderboard?limit=10`)
             .then(data => {
-                setLeaderboard(data.leaderboard || []);
+                setLeaderboard(data.leaderboard || data.traders || []);
                 setIsLoadingLeaderboard(false);
             })
             .catch(err => {
@@ -260,22 +259,22 @@ const Dashboard = () => {
                                                 <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>#{idx + 1}</td>
                                                 <td style={{ padding: '0.75rem' }}>
                                                     <div className="flex items-center gap-3">
-                                                        {trader.profileImage ? (
-                                                            <img src={trader.profileImage} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)' }} />
+                                                        {trader.profileImage || trader.profile_image ? (
+                                                            <img src={trader.profileImage || trader.profile_image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)' }} />
                                                         ) : (
-                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{trader.userName?.charAt(0) || 'T'}</div>
+                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{(trader.userName || trader.username || 'T').charAt(0)}</div>
                                                         )}
-                                                        <span style={{ fontWeight: 500 }}>{trader.userName || 'Unknown'}</span>
+                                                        <span style={{ fontWeight: 500 }}>{trader.userName || trader.username || 'Unknown'}</span>
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '0.75rem' }}>
                                                     <a
-                                                        href={`https://polymarket.com/profile/${trader.proxyWallet}`}
+                                                        href={`https://polymarket.com/profile/${trader.proxyWallet || trader.address}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ fontSize: '0.75rem', color: 'var(--primary)', opacity: 0.8 }}
                                                     >
-                                                        {trader.proxyWallet.substring(0, 6)}...{trader.proxyWallet.substring(38)}
+                                                        {(trader.proxyWallet || trader.address || "").substring(0, 6)}...{(trader.proxyWallet || trader.address || "").substring(38)}
                                                     </a>
                                                 </td>
                                                 <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent)' }}>

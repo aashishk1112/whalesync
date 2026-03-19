@@ -90,12 +90,17 @@ class PolymarketService:
                     processed_traders.append({
                         "rank": t.get("rank"),
                         "username": t.get("userName") or t.get("pseudonym") or "Anonymous Whale",
+                        "userName": t.get("userName") or t.get("pseudonym") or "Anonymous Whale", # Legacy compatibility
                         "address": t.get("proxyWallet"),
+                        "proxyWallet": t.get("proxyWallet"), # Legacy compatibility
+                        "trader_id": t.get("proxyWallet"), # Legacy compatibility
                         "pnl": pnl,
                         "volume": vol,
                         "roi": roi,
                         "win_rate": win_rate,
-                        "profile_image": t.get("profileImage")
+                        "accuracy": win_rate * 100, # Legacy compatibility
+                        "profile_image": t.get("profileImage"),
+                        "profileImage": t.get("profileImage") # Legacy compatibility
                     })
                 
                 # In-memory sorting for ROI and WIN_RATE

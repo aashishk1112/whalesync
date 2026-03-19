@@ -101,7 +101,7 @@ const Settings = () => {
             const address = await signer.getAddress();
 
             // Ask for explicit consent
-            const consent = window.confirm(`Connect wallet ${address.substring(0, 6)}...${address.substring(38)} for Polymarket Prediction Automation?\n\nYou authorize the automation logic to interact with markets using Polymarket CLOB APIs on your behalf.`);
+            const consent = window.confirm(`Connect wallet ${(address || '').substring(0, 6)}...${(address || '').substring(38)} for Polymarket Prediction Automation?\n\nYou authorize the automation logic to interact with markets using Polymarket CLOB APIs on your behalf.`);
             if (!consent) {
                 setIsLinking(false);
                 return;
@@ -120,7 +120,7 @@ const Settings = () => {
                 const res = await linkPolymarket(creds.proxyAddress || address, creds);
                 setIsLinking(false);
                 if (res.success) {
-                    setMessage({ type: 'success', text: `AML Screening Clear. Polymarket Proxy Wallet (${(creds.proxyAddress || address).substring(0,6)}...) linked successfully!` });
+                    setMessage({ type: 'success', text: `AML Screening Clear. Polymarket Proxy Wallet (${((creds.proxyAddress || address) || '').substring(0,6)}...) linked successfully!` });
                 } else {
                     setMessage({ type: 'error', text: res.error || 'Failed to link profile.' });
                 }
