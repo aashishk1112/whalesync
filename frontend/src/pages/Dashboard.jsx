@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PortfolioContext } from '../context/PortfolioContext';
+import { AuthContext } from '../context/AuthContext';
 import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
     const { portfolio, settings, addSource } = useContext(PortfolioContext);
+    const { user } = useContext(AuthContext);
     const [signals, setSignals] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [activeTab, setActiveTab] = useState('Polymarket');
@@ -12,9 +14,10 @@ const Dashboard = () => {
     const [notification, setNotification] = useState(null);
 
     useEffect(() => {
+        if (!user?.user_id) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         // Fetch consensus signals
-        fetch(`${apiUrl}/api/signals`)
+        fetch(`${apiUrl}/api/signals?user_id=${user.user_id}`)
             .then(res => res.json())
             .then(data => setSignals(data.signals || []))
             .catch(err => console.error(err));
@@ -30,7 +33,7 @@ const Dashboard = () => {
                 console.error(err);
                 setIsLoadingLeaderboard(false);
             });
-    }, []);
+    }, [user]);
 
     const handleFollow = async (trader) => {
         const result = await addSource({
