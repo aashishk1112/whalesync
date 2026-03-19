@@ -66,7 +66,7 @@ const Leaderboard = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-12">
-                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <div className="flex items-center gap-2 mb-2">
                         <TrendingUp size={16} className="text-primary" />
                         <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOP {timeframe} ROI</h4>
@@ -75,7 +75,7 @@ const Leaderboard = () => {
                         {traders.length > 0 ? `${Math.max(...traders.map(t => t.roi || 0)).toFixed(1)}%` : '0.0%'}
                     </p>
                 </div>
-                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                <div className="glass-panel animate-fade-in stagger-2" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <div className="flex items-center gap-2 mb-2">
                         <Target size={16} className="text-success" />
                         <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">AVG ACCURACY</h4>
@@ -84,7 +84,7 @@ const Leaderboard = () => {
                         {traders.length > 0 ? `${(traders.reduce((acc, t) => acc + (t.win_rate || 0), 0) / traders.length * 100).toFixed(1)}%` : '0.0%'}
                     </p>
                 </div>
-                <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(0,0,0,0) 100%)' }}>
+                <div className="glass-panel animate-fade-in stagger-3" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(0,0,0,0) 100%)' }}>
                     <div className="flex items-center gap-2 mb-2">
                         <Shield size={16} className="text-accent" />
                         <h4 className="text-muted uppercase text-[10px] font-bold tracking-widest">TOTAL VOLUME</h4>
@@ -138,7 +138,11 @@ const Leaderboard = () => {
                             </tr>
                         ) : (
                             traders.map((trader, idx) => (
-                                <tr key={trader.address || idx} className="table-row-hover" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <tr 
+                                    key={trader.address || idx} 
+                                    className={`table-row-hover animate-fade-in stagger-${(idx % 5) + 1}`} 
+                                    style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
+                                >
                                     <td style={{ padding: '1.25rem' }}>
                                         <div style={{ 
                                             width: '24px', 
@@ -158,7 +162,7 @@ const Leaderboard = () => {
                                     <td style={{ padding: '1.25rem' }}>
                                         <div className="flex items-center gap-3">
                                             {trader.profile_image ? (
-                                                <img src={trader.profile_image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                                                <img src={trader.profile_image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)' }} />
                                             ) : (
                                                 <div style={{ 
                                                     width: '32px', 
@@ -190,7 +194,7 @@ const Leaderboard = () => {
                                         {trader.win_rate ? `${(trader.win_rate * 100).toFixed(1)}%` : '0%'}
                                     </td>
                                     <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                                        <button className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>
+                                        <button className="btn-outline hover-glow" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', background: 'rgba(255,255,255,0.02)' }}>
                                             Mirror
                                         </button>
                                     </td>
