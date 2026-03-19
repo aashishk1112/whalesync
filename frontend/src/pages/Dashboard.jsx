@@ -14,7 +14,7 @@ const Dashboard = () => {
     useEffect(() => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         // Fetch consensus signals
-        fetch(`${apiUrl}/api/signals/`)
+        fetch(`${apiUrl}/api/signals`)
             .then(res => res.json())
             .then(data => setSignals(data.signals || []))
             .catch(err => console.error(err));
