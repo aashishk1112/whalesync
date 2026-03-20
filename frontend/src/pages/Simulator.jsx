@@ -473,7 +473,7 @@ const Simulator = () => {
     }, [newStrat.selectedSources, newStrat.riskMode, newStrat.allocation, newStrat.betSizePercentage]);
 
     const StatCard = ({ title, value, trend, icon: Icon, highlight }) => (
-        <div className={`glass-panel hover-glow flex flex-col justify-between ${highlight ? 'iridescent-border glow-pulse' : ''}`} style={{ padding: '1rem', height: '120px', background: highlight ? 'rgba(59, 130, 246, 0.05)' : 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)' }}>
+        <div className={`glass-panel hover-glow flex flex-col justify-between ${highlight ? 'iridescent-border glow-pulse' : ''}`} style={{ padding: '1rem', height: '120px', minWidth: '0', background: highlight ? 'rgba(59, 130, 246, 0.05)' : 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)' }}>
             <div className="flex justify-between items-start">
                 <div style={{ background: highlight ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)', padding: '0.5rem', borderRadius: '8px', border: highlight ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Icon size={18} className={highlight ? 'text-white' : 'text-primary'} />
@@ -549,7 +549,7 @@ const Simulator = () => {
             </div>
 
             {/* Section 1: Hero Command Center (Phase 1) */}
-            <div className="grid grid-cols-4 gap-4 mb-12">
+            <div className="mb-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', width: '100%' }}>
                 <StatCard 
                     title="Total Portfolio" 
                     value={`$${portfolio.balance.toLocaleString()}`} 
