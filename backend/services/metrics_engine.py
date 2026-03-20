@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-import numpy as np
+import math
 
 class MetricsEngine:
     @staticmethod
@@ -44,7 +44,7 @@ class MetricsEngine:
         ) * 100
         """
         # Normalize volume for scoring (log scale for whales)
-        volume_score = min(1.0, np.log10(max(1.0, volume)) / 7.0) # 10M = 1.0
+        volume_score = min(1.0, math.log10(max(1.0, volume)) / 7.0) # 10M = 1.0
         
         # Increased weights for ROI and Win Rate to better differentiate top traders
         score = (

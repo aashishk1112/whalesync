@@ -246,6 +246,10 @@ class PolymarketService:
                 self._save_db_snapshot(today_str, period, processed_traders)
                 
                 return self._sort_leaderboard(processed_traders, sort_by)[:limit]
+        except Exception as e:
+            print(f"Error fetching leaderboard: {e}")
+            return []
+
     def calculate_global_rank(self, user_roi: float, timeframe: str = "DAY") -> int:
         """Estimate global rank based on user ROI vs cached leaderboard snapshots."""
         try:
