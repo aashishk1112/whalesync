@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Play, Square, Settings, Activity, ChevronDown, Check, X, TrendingUp, TrendingDown, Users, Target, Zap, Shield, Flame, Info, BarChart3, Clock, Rocket, Globe } from 'lucide-react';
+import { Play, Square, Settings, Activity, ChevronDown, ChevronRight, Check, X, TrendingUp, TrendingDown, Users, Target, Zap, Shield, Flame, Info, BarChart3, Clock, Rocket, Globe, Award } from 'lucide-react';
 import { PortfolioContext } from '../context/PortfolioContext';
 import { AuthContext } from '../context/AuthContext';
 
@@ -27,11 +27,13 @@ const Sparkline = ({ data, color = 'var(--primary)', height = 30, width = 100 })
     );
 };
 
-const Simulator = () => {
+const StrategySandbox = () => {
     const { user } = useContext(AuthContext);
     const { portfolio, settings, refreshPortfolio } = useContext(PortfolioContext);
     const [strategies, setStrategies] = useState([]);
     const [wizardStep, setWizardStep] = useState(1);
+    const [archetypes, setArchetypes] = useState({});
+    const [loadingArchetypes, setLoadingArchetypes] = useState(true);
     const [categories, setCategories] = useState([]);
     const [newStrat, setNewStrat] = useState({
         name: '',
@@ -44,27 +46,47 @@ const Simulator = () => {
         riskMode: 'Balanced'
     });
 
+    useEffect(() => {
+        const fetchArchetypes = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/traders/archetypes`);
+                const data = await res.json();
+                if (data.archetypes) {
+                    setArchetypes(data.archetypes);
+                }
+            } catch (err) {
+                console.error("Error fetching archetypes:", err);
+            } finally {
+                setLoadingArchetypes(false);
+            }
+        };
+        fetchArchetypes();
+    }, []);
+
     const STRATEGY_TEMPLATES = [
         {
             name: "Copy Top Whales",
-            description: "Automatically tracks the top 5 traders by WhaleScore (7D historical).",
-            roi: "+18.4%",
+            description: `Automatically tracks ${archetypes.top_whale?.username || 'top whales'} (WhaleScore: ${archetypes.top_whale?.whale_score?.toFixed(1) || '92.4'}).`,
+            roi: archetypes.top_whale?.roi ? `+${archetypes.top_whale.roi.toFixed(1)}%` : "+18.4%",
             risk: "Medium",
-            config: { allocation: 15, betSize: 5, riskMode: 'Balanced' }
+            config: { allocation: 15, betSize: 5, riskMode: 'Balanced' },
+            source_address: archetypes.top_whale?.address
         },
         {
             name: "Win Rate Snipers",
-            description: "Focuses on traders with >75% accuracy and low drawdown.",
-            roi: "+12.1%",
+            description: `Focuses on ${archetypes.safest?.username || 'low-risk snipers'} (Accuracy: ${((archetypes.safest?.win_rate || 0.75) * 100).toFixed(0)}%).`,
+            roi: archetypes.safest?.roi ? `+${archetypes.safest.roi.toFixed(1)}%` : "+12.1%",
             risk: "Low",
-            config: { allocation: 10, betSize: 2, riskMode: 'Conservative' }
+            config: { allocation: 10, betSize: 2, riskMode: 'Conservative' },
+            source_address: archetypes.safest?.address
         },
         {
             name: "Momentum Seekers",
-            description: "Aggressive copying of high-volume trending market leaders.",
-            roi: "+28.7%",
+            description: `Aggressive copying of ${archetypes.trending?.username || 'trending traders'} (+${archetypes.trending?.roi?.toFixed(1) || '28'}% spike).`,
+            roi: archetypes.trending?.roi ? `+${archetypes.trending.roi.toFixed(1)}%` : "+28.7%",
             risk: "High",
-            config: { allocation: 25, betSize: 10, riskMode: 'Aggressive' }
+            config: { allocation: 25, betSize: 10, riskMode: 'Aggressive' },
+            source_address: archetypes.trending?.address
         }
     ];
 
@@ -285,6 +307,16 @@ const Simulator = () => {
         }));
     };
 
+    const Metric = ({ label, value, subtext }) => (
+        <div className="bg-black/40 p-3.5 rounded-xl border border-white/5 hover:border-white/10 transition-all group">
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">{label}</p>
+            <div className="flex items-baseline gap-2">
+                <h3 className="text-xl font-black text-white group-hover:text-primary transition-colors">{value}</h3>
+                {subtext && <span className="text-[10px] font-bold text-success capitalize">{subtext}</span>}
+            </div>
+        </div>
+    );
+
     const SourceMultiselect = ({ platform, selected, onToggle }) => {
         const [isOpen, setIsOpen] = useState(false);
         const dropdownRef = useRef(null);
@@ -491,35 +523,57 @@ const Simulator = () => {
         </div>
     );
 
-    const TemplateCard = ({ name, description, roi, risk, badge, onDeploy }) => (
-        <div className="glass-panel group flex flex-col hover-expand-lg iridescent-border" style={{ padding: '1.25rem', minWidth: '280px', height: '180px', background: 'rgba(10, 13, 20, 0.8)' }}>
-            <div className="flex justify-between items-start mb-2">
-                <h4 className="text-sm font-bold text-white tracking-tight">{name}</h4>
+    const TemplateCardV2 = ({ name, description, roi, risk, badge, onDeploy }) => (
+        <div className="glass-panel group flex flex-col hover-expand-lg iridescent-border relative overflow-hidden" style={{ padding: '1.25rem', minWidth: '300px', flex: '0 0 300px', height: '220px', background: 'rgba(10, 13, 20, 0.8)' }}>
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex flex-col">
+                    <h4 className="text-sm font-black text-white tracking-tight leading-tight mb-1">{name}</h4>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-bold text-muted uppercase tracking-widest flex items-center gap-1">
+                            <Users size={10} /> 1.2k copying
+                        </span>
+                        <div className="w-1 h-1 bg-white/10 rounded-full" />
+                        <span className="text-[8px] font-black text-profit uppercase tracking-widest animate-pulse">
+                            Live ROI
+                        </span>
+                    </div>
+                </div>
                 {badge && (
-                    <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${badge.includes('Trending') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-primary/20 text-primary border border-primary/30'}`}>
+                    <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${badge.includes('Trending') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.1)]' : 'bg-primary/20 text-primary border border-primary/30'}`}>
                         {badge}
                     </span>
                 )}
             </div>
-            <p className="text-[11px] text-muted mb-4 leading-relaxed opacity-70 line-clamp-2">{description}</p>
+            
+            <p className="text-[10px] text-muted mb-4 leading-relaxed opacity-60 line-clamp-2 font-medium">{description}</p>
+            
+            <div className="mb-4 flex items-center gap-4">
+                <div className="flex-1 h-10 bg-white/5 rounded-lg border border-white/5 p-2 flex items-center justify-center">
+                    <Sparkline data={[10, 15, 12, 18, 25, 22, 30]} color={roi.includes('+') ? '#10b981' : '#f43f5e'} width={180} height={20} />
+                </div>
+            </div>
+
             <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
                 <div>
-                    <div className="text-[9px] text-muted uppercase font-bold tracking-tighter">Exp. Returns</div>
-                    <div className="text-md font-bold text-profit">{roi}</div>
+                    <div className="text-[8px] text-muted uppercase font-black tracking-widest opacity-40 mb-0.5">EST. RETURNS</div>
+                    <div className="text-sm font-black text-profit flex items-center gap-1">
+                        {roi}
+                        <span className="text-[8px] opacity-40 font-bold">APY</span>
+                    </div>
                 </div>
                 <button 
                     type="button"
                     onClick={onDeploy}
-                    className="py-2 px-4 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
+                    className="py-2.5 px-5 bg-primary text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover hover:scale-105 transition-all"
                 >
-                    Deploy
+                    Use Strategy
                 </button>
             </div>
         </div>
     );
 
     return (
-        <div className="container mt-4 animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 relative">
             {/* Phase 7: Deployment Success Notification */}
             {deployedSuccess && (
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[3000] animate-in fade-in slide-in-from-top-4 duration-500">
@@ -534,7 +588,7 @@ const Simulator = () => {
                     </div>
                 </div>
             )}
-            {/* Header (Phase 9 Cleaner) */}
+            {/* Header (Branded: Strategy Sandbox) */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 pb-6 border-b border-white/5">
                 <div>
                     <h2 className="text-2xl font-semibold text-white flex items-center gap-2.5 mb-1.5">
@@ -542,14 +596,14 @@ const Simulator = () => {
                     </h2>
                     <p className="text-muted text-[10px] font-medium uppercase tracking-[0.15em] opacity-60">Professional Simulation & Automated Copying</p>
                 </div>
-                <div className="flex items-center gap-2.5 text-[9px] font-bold tracking-widest text-muted bg-white/[0.03] py-2 px-5 rounded-full border border-white/10 glass-panel">
+                <div className="flex items-center gap-2.5 text-[9px] font-bold tracking-widest text-muted bg-white/[0.03] py-2 px-5 rounded-full border border-white/10 glass-panel-unified">
                     <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.4)]" />
                     NETWORK: <span className="text-accent">OPTIMAL</span>
                 </div>
             </div>
 
-            {/* Section 1: Hero Command Center (Phase 1) */}
-            <div className="mb-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', width: '100%' }}>
+            {/* Section 1: Hero Command Center (Strategy Sandbox Style) */}
+            <div className="mb-8" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', width: '100%' }}>
                 <StatCard 
                     title="Total Portfolio" 
                     value={`$${portfolio.balance.toLocaleString()}`} 
@@ -558,62 +612,98 @@ const Simulator = () => {
                 />
                 <StatCard 
                     title="Profit / Loss (24H)" 
-                    value="+$420.69" 
-                    trend="+1.8%" 
+                    value={portfolio.total_pnl >= 0 ? `+$${portfolio.total_pnl.toFixed(2)}` : `-$${Math.abs(portfolio.total_pnl).toFixed(2)}`} 
+                    trend={`${portfolio.accuracy}% WinRate`} 
                     icon={TrendingUp} 
                 />
                 <StatCard 
-                    title="Active Units" 
+                    title="Active Bots" 
                     value={strategies.filter(s => s.status === 'active').length} 
                     icon={Activity} 
                 />
                 <StatCard 
                     title="AI Confidence" 
-                    value="72%" 
+                    value={`${(newStrat.selectedSources.length > 0 ? (previewData.confidence_score) : 72)}%`} 
                     trend="+5.2%"
                     icon={Zap} 
                 />
             </div>
 
-            <div className="flex gap-4 mb-12">
-                <button 
-                    onClick={() => {
-                        const target = document.getElementById('strategy-builder');
-                        target?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="flex-1 py-4 bg-primary hover:bg-primary-hover text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]"
-                >
-                    <Rocket size={20} /> 🚀 Deploy First Strategy
-                </button>
-                <button 
-                    onClick={() => {
-                        const target = document.getElementById('strategy-templates');
-                        target?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold border border-white/10 transition-all hover:scale-[1.02]"
-                >
-                    Explore Templates
-                </button>
-            </div>
-
-            {/* Section 2: Strategy Templates V2 (Phase 2) */}
-            <div id="strategy-templates" className="mb-14">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2.5">
-                        <Flame size={20} className="text-orange-500" />
-                        <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white">Irresistible Blueprints</h3>
+            {/* FIX 1: QuickStartBar (Guided Entry Point) */}
+            <div className="mb-12">
+                <div className="glass-panel-unified p-4 flex items-center justify-between border-primary/20 bg-primary/[0.02]">
+                    <div className="flex items-center gap-4 px-4 border-r border-white/10">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group">
+                            <Rocket size={20} className="group-hover:animate-bounce" />
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-black text-white uppercase tracking-widest">Start in 10 seconds</div>
+                            <div className="text-[9px] text-muted font-bold uppercase tracking-widest opacity-60">guided entry point</div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 flex items-center justify-around px-8">
+                        <button 
+                            onClick={() => {
+                                applyTemplate(STRATEGY_TEMPLATES[0]);
+                                document.getElementById('live-preview')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="flex items-center gap-3 py-3 px-6 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600/30 transition-all group"
+                        >
+                            <span className="text-lg">🚀</span>
+                            <span className="text-[11px] font-black text-white uppercase tracking-widest group-hover:text-blue-400 transition-colors">AI Strategy</span>
+                        </button>
+                        
+                        <div className="w-px h-8 bg-white/5" />
+                        
+                        <button 
+                            onClick={() => {
+                                recommendTraders();
+                                document.getElementById('live-preview')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="flex items-center gap-3 py-3 px-6 rounded-xl bg-green-600/10 hover:bg-green-600/20 border border-green-600/30 transition-all group"
+                        >
+                            <span className="text-lg">🔥</span>
+                            <span className="text-[11px] font-black text-white uppercase tracking-widest group-hover:text-green-400 transition-colors">Copy Whales</span>
+                        </button>
+                        
+                        <div className="w-px h-8 bg-white/5" />
+                        
+                        <button 
+                            onClick={() => document.getElementById('strategy-builder')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="flex items-center gap-3 py-3 px-6 rounded-xl bg-gray-700/10 hover:bg-gray-700/20 border border-gray-700/30 transition-all group"
+                        >
+                            <span className="text-lg">⚙️</span>
+                            <span className="text-[11px] font-black text-white/60 uppercase tracking-widest group-hover:text-white transition-all">Manual Build</span>
+                        </button>
                     </div>
                 </div>
-                <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide">
+            </div>
+
+
+            {/* FIX 4: Templates as Primary Driver (Repositioned ABOVE Builder) */}
+            <div id="strategy-templates" className="mb-14">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                            <Flame size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/90">Institutional Blueprints</h3>
+                            <p className="text-[9px] font-bold text-muted uppercase tracking-widest opacity-40">pre-configured alpha engines</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
                     {STRATEGY_TEMPLATES.map((tpl, i) => (
                         <div key={i} className="snap-start">
-                            <TemplateCard 
+                            <TemplateCardV2 
                                 {...tpl} 
                                 badge={i === 0 ? '🔥 Trending' : i === 1 ? '🎯 Safe' : '⚡ Aggressive'}
                                 onDeploy={() => {
                                     applyTemplate(tpl);
-                                    const preview = document.getElementById('live-preview');
-                                    preview?.scrollIntoView({ behavior: 'smooth' });
+                                    setWizardStep(4); // Jump to confirmation
+                                    document.getElementById('live-preview')?.scrollIntoView({ behavior: 'smooth' });
                                 }} 
                             />
                         </div>
@@ -622,484 +712,447 @@ const Simulator = () => {
             </div>
 
             {/* Section 3: Main Grid (Wizard + Preview) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12 items-stretch">
                 {/* Left: Strategy Wizard (Phase 3) */}
-                <div className="lg:col-span-7">
-                    <div className="glass-panel" style={{ padding: '2.5rem', height: '100%', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)' }}>
-                        <div id="strategy-builder" className="flex items-center justify-between mb-8">
-                            <div>
-                                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                                    <Settings size={20} className="text-primary" /> Strategy Wizard
-                                </h3>
-                                <div className="text-[10px] text-muted uppercase font-bold tracking-widest mt-1">Step {wizardStep} of 4</div>
-                            </div>
-                            <div className="flex gap-1.5">
-                                {[1, 2, 3, 4].map(step => (
-                                    <div key={step} className={`w-8 h-1 rounded-full transition-all ${wizardStep >= step ? 'bg-primary' : 'bg-white/10'}`} />
-                                ))}
-                            </div>
+                <div id="strategy-builder" className="lg:col-span-12 lg:mb-4">
+                    <div className="glass-panel-unified p-10 relative overflow-hidden h-full">
+                        {/* Step Indicator (Addictive UX) */}
+                        <div className="step-indicator">
+                            {[1, 2, 3, 4].map(step => (
+                                <div key={step} className={`step-dot ${wizardStep >= step ? 'active' : ''}`} />
+                            ))}
                         </div>
 
-                        {error && (
-                            <div className="mb-6 p-4 bg-danger/10 border border-danger/20 rounded-lg text-danger text-xs flex justify-between items-center animate-shake">
-                                <span>{error}</span>
-                                <X size={16} className="cursor-pointer" onClick={() => setError('')} />
-                            </div>
-                        )}
-
-                        <div className="space-y-8 min-h-[420px]">
-                            {wizardStep === 1 && (
-                                <div className="space-y-6 animate-fade-in">
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3 block">1. Strategy Identity</label>
-                                        <input 
-                                            type="text" 
-                                            value={newStrat.name}
-                                            onChange={e => setNewStrat({...newStrat, name: e.target.value})}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all outline-none"
-                                            placeholder="e.g., Aggressive Whale Hunter"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3 block">Network Platform</label>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {['Polymarket', 'Kalshi'].map(p => (
-                                                <button
-                                                    key={p}
-                                                    type="button"
-                                                    onClick={() => setNewStrat({...newStrat, platform: p})}
-                                                    className={`py-3 px-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${newStrat.platform === p ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted'}`}
-                                                >
-                                                    {p} {p === 'Kalshi' && '(Soon)'}
-                                                </button>
-                                            ))}
+                        <div className="grid lg:grid-cols-12 gap-10 items-stretch">
+                            {/* Left: Wizard Form (FIX 3: BuilderFlow) */}
+                            <div className="lg:col-span-7 pr-0 lg:pr-10 border-b lg:border-b-0 lg:border-r border-white/5 pb-10 lg:pb-0">
+                                <div className="flex items-center justify-between mb-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                            {wizardStep === 1 ? <Target size={20} /> : 
+                                             wizardStep === 2 ? <Shield size={20} /> :
+                                             wizardStep === 3 ? <Users size={20} /> : <Rocket size={20} />}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-0.5">
+                                                {wizardStep === 1 ? 'Strategic Identity' : 
+                                                 wizardStep === 2 ? 'Risk Architecture' :
+                                                 wizardStep === 3 ? 'Intelligence Sources' : 'Final Ignition'}
+                                            </h3>
+                                            <div className="text-[9px] text-muted font-bold uppercase tracking-[0.2em] opacity-40">Phase {wizardStep} of 4 • AI-Guided Build</div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-
-                            {wizardStep === 2 && (
-                                <div className="space-y-6 animate-fade-in">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3 block">2. Risk Profile</label>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {[
-                                            { name: 'Conservative', desc: 'Focus on high-probability stable yields', icon: Shield },
-                                            { name: 'Balanced', desc: 'Default mix of safety and performance', icon: Activity },
-                                            { name: 'Aggressive', desc: 'Maximized exposure for high-growth targets', icon: Flame }
-                                        ].map(r => (
-                                            <button
-                                                key={r.name}
-                                                type="button"
-                                                onClick={() => setNewStrat({...newStrat, riskMode: r.name})}
-                                                className={`flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${newStrat.riskMode === r.name ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}`}
-                                            >
-                                                <div className={`p-2 rounded-lg ${newStrat.riskMode === r.name ? 'bg-primary text-white' : 'bg-white/5 text-muted'}`}>
-                                                    <r.icon size={18} />
-                                                </div>
-                                                <div>
-                                                    <div className={`text-[10px] font-bold uppercase tracking-widest ${newStrat.riskMode === r.name ? 'text-white' : 'text-muted'}`}>{r.name}</div>
-                                                    <div className="text-[9px] text-muted opacity-60 mt-0.5">{r.desc}</div>
-                                                </div>
-                                            </button>
-                                        ))}
+                                    <div className="px-4 py-2 bg-primary/5 border border-primary/10 rounded-lg flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">Auto-Optimizer Active</span>
                                     </div>
                                 </div>
-                            )}
 
-                            {wizardStep === 3 && (
-                                <div className="space-y-6 animate-fade-in">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted block">3. Intelligence Sources (Traders)</label>
-                                        <button 
-                                            type="button"
-                                            onClick={recommendTraders}
-                                            className="text-[9px] font-black text-primary hover:text-white uppercase tracking-widest flex items-center gap-1.5 transition-all bg-primary/10 px-3 py-1 rounded-full border border-primary/20"
-                                        >
-                                            <Zap size={10} fill="currentColor" /> AI Auto-Select
-                                        </button>
-                                    </div>
-                                    <SourceMultiselect 
-                                        platform={newStrat.platform}
-                                        selected={newStrat.selectedSources}
-                                        onToggle={toggleSourceSelection}
-                                    />
-                                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Settings size={12} className="text-primary" />
-                                            <div className="text-[10px] font-bold text-white uppercase tracking-widest">Trader Selection Engine</div>
-                                        </div>
-                                        <p className="text-[9px] text-muted leading-relaxed">Search, filter by ROI, and sort by WhaleScore in the leaderboard to refine your strategy inputs.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {wizardStep === 4 && (
-                                <div className="space-y-8 animate-fade-in">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1 block">4. Final Calibration</label>
-                                    
-                                    <div className="grid grid-cols-1 gap-6">
-                                        <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Portfolio Allocation</label>
-                                                <span className="text-sm font-black text-primary">{newStrat.allocation}%</span>
+                                <div className="space-y-8 min-h-[440px]">
+                                    {wizardStep === 1 && (
+                                        <div className="space-y-8 animate-fade-in">
+                                            <div className="group">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-3 block group-hover:text-primary transition-colors">Unit Designation</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. BTC Alpha Momentum"
+                                                    value={newStrat.name}
+                                                    onChange={e => setNewStrat({...newStrat, name: e.target.value})}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-5 text-sm text-white focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all outline-none font-medium placeholder:text-white/10"
+                                                />
                                             </div>
-                                            <input 
-                                                type="range" 
-                                                min="5" max="100" step="1"
-                                                value={newStrat.allocation}
-                                                onChange={e => setNewStrat({...newStrat, allocation: e.target.value})}
-                                                className="w-full accent-primary h-1 bg-white/10 rounded-full appearance-none hover:bg-white/20 transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Amount per Signal</label>
-                                                <span className="text-sm font-black text-primary">{newStrat.betSizePercentage}%</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="1" max="25" step="1"
-                                                value={newStrat.betSizePercentage}
-                                                onChange={e => setNewStrat({...newStrat, betSizePercentage: e.target.value})}
-                                                className="w-full accent-primary h-1 bg-white/10 rounded-full appearance-none hover:bg-white/20 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                                        <div className="flex items-center gap-3">
-                                            <Shield className="text-primary" size={20} />
                                             <div>
-                                                <div className="text-[10px] font-bold text-white uppercase mb-0.5">Live Execution</div>
-                                                <div className="text-[9px] text-muted uppercase tracking-tighter">Requires connected wallet</div>
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-3 block">Deployment Layer</label>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    {['Polymarket', 'Hyperliquid'].map(p => (
+                                                        <button
+                                                            key={p}
+                                                            type="button"
+                                                            onClick={() => setNewStrat({...newStrat, platform: p})}
+                                                            className={`py-4 rounded-2xl border-2 text-[11px] font-black uppercase tracking-widest transition-all ${newStrat.platform === p ? 'bg-primary/10 border-primary text-primary shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'bg-transparent border-white/5 text-muted hover:border-white/20'}`}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
+                                    )}
+
+                                    {wizardStep === 2 && (
+                                        <div className="space-y-8 animate-fade-in">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-3 block">Risk Profile Architecture</label>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {[
+                                                    { name: 'Conservative', desc: 'Prioritize preservation (1-2% per trade)', icon: Shield, color: 'text-success' },
+                                                    { name: 'Balanced', desc: 'Optimized risk/reward (3-5% per trade)', icon: Activity, color: 'text-primary' },
+                                                    { name: 'Aggressive', desc: 'Maximum alpha capture (5-10% per trade)', icon: Flame, color: 'text-accent' }
+                                                ].map(r => (
+                                                    <button
+                                                        key={r.name}
+                                                        type="button"
+                                                        onClick={() => setNewStrat({...newStrat, riskMode: r.name})}
+                                                        className={`flex items-center gap-5 p-6 rounded-2xl border-2 transition-all text-left group ${newStrat.riskMode === r.name ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${newStrat.riskMode === r.name ? 'bg-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'bg-white/5 text-muted group-hover:bg-white/10'}`}>
+                                                            <r.icon size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <div className={`text-[12px] font-black uppercase tracking-[0.2em] ${newStrat.riskMode === r.name ? 'text-white' : 'text-muted'}`}>{r.name}</div>
+                                                            <div className="text-[10px] text-muted opacity-60 font-bold uppercase tracking-widest mt-1">{r.desc}</div>
+                                                        </div>
+                                                        {newStrat.riskMode === r.name && (
+                                                            <div className="ml-auto w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                                                <Check size={14} className="text-white" strokeWidth={4} />
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {wizardStep === 3 && (
+                                        <div className="space-y-8 animate-fade-in">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="group">
+                                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted block group-hover:text-primary transition-colors">Intelligence Sources</label>
+                                                    <p className="text-[9px] text-muted opacity-40 font-bold uppercase tracking-widest mt-1">SELECT WHALES TO MIRROR</p>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={recommendTraders}
+                                                    className="text-[10px] font-black text-primary hover:text-white uppercase tracking-widest flex items-center gap-2 transition-all bg-primary/10 px-5 py-2.5 rounded-xl border border-primary/20 hover:bg-primary/20"
+                                                >
+                                                    <Zap size={14} fill="currentColor" /> AI Auto-Select
+                                                </button>
+                                            </div>
+                                            <div className="max-h-[340px] overflow-y-auto pr-3 custom-scrollbar">
+                                                <SourceMultiselect 
+                                                    platform={newStrat.platform}
+                                                    selected={newStrat.selectedSources}
+                                                    onToggle={toggleSourceSelection}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {wizardStep === 4 && (
+                                        <div className="space-y-8 animate-fade-in">
+                                            <div className="text-center py-6">
+                                                <div className="w-20 h-20 rounded-[2.5rem] bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 animate-bounce shadow-[0_0_40px_rgba(59,130,246,0.1)]">
+                                                    <Rocket size={40} />
+                                                </div>
+                                                <h4 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Ignition Point</h4>
+                                                <p className="text-[11px] text-muted max-w-[340px] mx-auto leading-relaxed uppercase tracking-widest opacity-60">Strategy units are synchronized. Intelligence modules are hot. Launch now to initiate real-time copy execution.</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-5">
+                                                <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/10 hover:border-primary/30 transition-all group">
+                                                    <div className="flex justify-between items-center mb-5">
+                                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted group-hover:text-primary transition-colors">Allocation Calibrator</label>
+                                                        <div className="px-3 py-1 bg-primary/10 rounded-lg text-primary text-[11px] font-black uppercase tracking-widest">{newStrat.allocation}%</div>
+                                                    </div>
+                                                    <input 
+                                                        type="range" 
+                                                        min="5" max="100" step="1"
+                                                        value={newStrat.allocation}
+                                                        onChange={e => setNewStrat({...newStrat, allocation: e.target.value})}
+                                                        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary"
+                                                    />
+                                                    <div className="flex justify-between mt-3 text-[8px] font-black text-muted uppercase tracking-widest opacity-40">
+                                                        <span>Conservative</span>
+                                                        <span>Max Capital</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/10 hover:border-primary/30 transition-all group">
+                                                    <div className="flex justify-between items-center mb-5">
+                                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted group-hover:text-primary transition-colors">Unit Bet Size</label>
+                                                        <div className="px-3 py-1 bg-primary/10 rounded-lg text-primary text-[11px] font-black uppercase tracking-widest">{newStrat.betSizePercentage}%</div>
+                                                    </div>
+                                                    <input 
+                                                        type="range" 
+                                                        min="1" max="25" step="1"
+                                                        value={newStrat.betSizePercentage}
+                                                        onChange={e => setNewStrat({...newStrat, betSizePercentage: e.target.value})}
+                                                        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary"
+                                                    />
+                                                    <div className="flex justify-between mt-3 text-[8px] font-black text-muted uppercase tracking-widest opacity-40">
+                                                        <span>Low Risk</span>
+                                                        <span>High Momentum</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-5 mt-12 pt-10 border-t border-white/5">
+                                    {wizardStep > 1 && (
                                         <button
                                             type="button"
-                                            disabled={!settings.polymarket_address}
-                                            onClick={() => setNewStrat({...newStrat, isLive: !newStrat.isLive})}
-                                            className={`relative w-12 h-6 rounded-full transition-all ${newStrat.isLive ? 'bg-primary' : 'bg-white/10'} ${!settings.polymarket_address ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                            onClick={() => setWizardStep(prev => prev - 1)}
+                                            className="px-8 py-5 bg-white/5 hover:bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl border border-white/10 transition-all flex items-center gap-2 group"
                                         >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-lg ${newStrat.isLive ? 'left-7' : 'left-1'}`} />
+                                            <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> BACK
+                                        </button>
+                                    )}
+                                    {wizardStep < 4 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setWizardStep(prev => prev + 1)}
+                                            className="flex-1 py-5 bg-primary hover:bg-primary-hover text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group"
+                                        >
+                                            Next Phase <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeploy()}
+                                            disabled={newStrat.selectedSources.length === 0 || !newStrat.name}
+                                            className="flex-1 py-5 bg-primary hover:bg-primary-dark text-white rounded-2xl shadow-2xl shadow-primary/40 transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50 group overflow-hidden relative"
+                                        >
+                                            <div className="relative z-10 flex flex-col items-center">
+                                                <span className="text-[13px] font-black uppercase tracking-[0.3em]">🚀 Launch Strategy Bot</span>
+                                                <span className="text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5">Runs instantly • Institutional Grade</span>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* FIX 5: Sticky Primary CTA (Strategic Launch) */}
+                                {newStrat.name && newStrat.selectedSources.length > 0 && (
+                                    <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[2000] animate-in slide-in-from-bottom-10 duration-700">
+                                        <button 
+                                            onClick={handleDeploy}
+                                            className="group relative flex flex-col items-center justify-center py-6 px-16 bg-primary rounded-3xl shadow-[0_25px_60px_rgba(59,130,246,0.6)] border border-primary-hover transition-all hover:scale-105 active:scale-95 overflow-hidden"
+                                        >
+                                            <div className="relative z-10 text-center">
+                                                <div className="flex items-center gap-3 mb-1 justify-center">
+                                                    <Rocket size={18} className="text-white group-hover:animate-bounce" />
+                                                    <span className="text-[14px] font-black text-white uppercase tracking-[0.4em]">Launch Strategy Bot</span>
+                                                </div>
+                                                <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Execute AI-Guided Returns Instantly</p>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[1500ms]" />
+                                            <div className="absolute -inset-1 bg-primary/20 blur-2xl group-hover:bg-primary/40 transition-all" />
                                         </button>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
 
-                        <div className="flex gap-4 mt-10">
-                            {wizardStep > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setWizardStep(prev => prev - 1)}
-                                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-2xl border border-white/10 transition-all"
-                                >
-                                    Back
-                                </button>
-                            )}
-                            {wizardStep < 4 ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setWizardStep(prev => prev + 1)}
-                                    className="flex-[2] py-4 bg-primary hover:bg-primary-hover text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 transition-all transform hover:scale-[1.02]"
-                                >
-                                    Next Step
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => handleDeploy()}
-                                    disabled={newStrat.selectedSources.length === 0 || !newStrat.name}
-                                    className="flex-[2] py-4 bg-primary hover:bg-primary-dark text-white rounded-2xl shadow-2xl shadow-primary/30 transition-all transform hover:scale-[1.02] disabled:opacity-50 group overflow-hidden relative"
-                                >
-                                    <div className="relative z-10 flex flex-col items-center">
-                                        <span className="text-[12px] font-black uppercase tracking-[0.2em]">🚀 Launch Strategy Bot</span>
-                                        <span className="text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5">Runs instantly • No risk</span>
+                            {/* Right: Strategy Preview (Phase 4 Live) */}
+                            <div id="live-preview" className="lg:col-span-5 flex flex-col">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h3 className="text-lg font-black text-white flex items-center gap-2 uppercase tracking-wide">
+                                        <Activity size={20} className="text-success glow-pulse" /> Live Analysis
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-success/10 rounded-full border border-success/20">
+                                        <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+                                        <span className="text-[9px] font-black text-success uppercase tracking-widest">Real-time</span>
                                     </div>
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right: Strategy Preview (Phase 4 Live) */}
-                <div id="live-preview" className="lg:col-span-5">
-                    <div className="glass-panel iridescent-border" style={{ padding: '2.5rem', height: '100%', background: 'rgba(10, 13, 20, 0.9)' }}>
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-lg font-black text-white flex items-center gap-2">
-                                <Activity size={20} className="text-success glow-pulse" /> Live Preview
-                            </h3>
-                            <div className="flex items-center gap-1.5 px-3 py-1 bg-success/10 rounded-full border border-success/20">
-                                <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-                                <span className="text-[9px] font-bold text-success uppercase tracking-widest">Real-time</span>
-                            </div>
-                        </div>
-
-                        {isPreviewLoading ? (
-                            <div className="flex flex-col items-center justify-center py-24 gap-6">
-                                <Activity size={48} className="text-primary/20 animate-pulse" />
-                                <div className="flex flex-col items-center gap-1">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Synthesizing Signals</p>
-                                    <p className="text-[9px] text-muted uppercase font-bold tracking-widest opacity-40">Intelligence Engine Active</p>
                                 </div>
-                            </div>
-                        ) : newStrat.selectedSources.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full min-h-[440px] text-center px-10 border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-                                <div className="p-6 bg-white/5 rounded-full mb-8">
-                                    <Rocket size={48} className="text-white/10" />
-                                </div>
-                                <h4 className="text-white font-black uppercase tracking-widest opacity-60 mb-3">Intelligence Engine Standby</h4>
-                                <p className="text-[10px] text-muted leading-relaxed uppercase tracking-[0.1em] max-w-[280px]">Select traders or use a template to activate real-time performance projections.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-10 animate-fade-in">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5 relative group overflow-hidden">
-                                        <div className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2 opacity-60">Expected 7D PnL</div>
-                                        <div className="text-3xl font-black text-profit tracking-tighter">+${previewData.expected_pnl_7d}</div>
-                                        <div className="mt-4">
-                                            <Sparkline 
-                                                data={[100, 150, 130, 180, 220, 210, previewData.expected_pnl_7d + 200]} 
-                                                color="var(--neon-green)" 
-                                                width={120} 
-                                                height={30} 
+
+                                {isPreviewLoading ? (
+                                    <div className="flex flex-col items-center justify-center flex-1 gap-6">
+                                        <Activity size={48} className="text-primary/20 animate-pulse" />
+                                        <div className="flex flex-col items-center gap-1">
+                                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Synthesizing Signals</p>
+                                            <p className="text-[9px] text-muted uppercase font-bold tracking-widest opacity-40">Intelligence Engine Active</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8 animate-fade-in flex-1">
+                                        {/* Status Tag */}
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {newStrat.selectedSources.length === 0 ? (
+                                                <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Showing Sample Performance</span>
+                                            ) : (
+                                                <span className="text-[8px] font-black text-success bg-success/10 px-2 py-0.5 rounded border border-success/20 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <div className="w-1 h-1 bg-success rounded-full animate-pulse" /> Live Analysis Mode
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-8">
+                                            <Metric 
+                                                label="PnL (Projection)" 
+                                                value={newStrat.selectedSources.length === 0 ? `+$${(portfolio.balance * 0.06).toLocaleString(undefined, {maximumFractionDigits: 0})}` : `+$${previewData.expected_pnl_7d.toLocaleString()}`} 
+                                                subtext="7d estimate"
+                                            />
+                                            <Metric 
+                                                label="Win Rate" 
+                                                value={newStrat.selectedSources.length === 0 ? '61%' : `${previewData.win_rate}%`} 
+                                                subtext="optimal"
+                                            />
+                                            <Metric 
+                                                label="Drawdown" 
+                                                value={newStrat.selectedSources.length === 0 ? '-4.2%' : `-${previewData.max_drawdown}%`} 
+                                                subtext="max expected"
+                                            />
+                                            <Metric 
+                                                label="AI Confidence" 
+                                                value={newStrat.selectedSources.length === 0 ? '74%' : `${previewData.confidence_score}%`} 
+                                                subtext="calibration"
                                             />
                                         </div>
-                                    </div>
-                                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2 opacity-60">Success Rate</div>
-                                        <div className="text-3xl font-black text-white tracking-tighter">{previewData.win_rate}%</div>
-                                        <div className="mt-4 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${previewData.win_rate}%` }} />
-                                        </div>
-                                    </div>
-                                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2 opacity-60">Max Drawdown</div>
-                                        <div className="text-3xl font-black text-loss tracking-tighter">-{previewData.max_drawdown}%</div>
-                                    </div>
-                                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2 opacity-60">Confidence</div>
-                                        <div className="text-3xl font-black text-primary tracking-tighter">{previewData.confidence_score}%</div>
-                                    </div>
-                                </div>
+                          
 
-                                <div className="p-6 bg-white/5 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <Users size={16} className="text-primary" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Active Signal Source</h4>
-                                    </div>
-                                    <div className="flex flex-wrap gap-3">
-                                        {newStrat.selectedSources.map(addr => {
-                                            const src = settings.copy_sources.find(s => s.address === addr);
-                                            return (
-                                                <div key={addr} className="flex items-center gap-2.5 bg-black/40 py-2 px-4 rounded-xl border border-white/5 hover:border-primary/30 transition-all cursor-crosshair">
-                                                    <div className="w-5 h-5 rounded-lg bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary">
-                                                        {src?.name?.charAt(0) || 'W'}
-                                                    </div>
-                                                    <span className="text-[11px] font-bold text-white/90">{src?.name || addr.substring(0, 6)}</span>
+                                        {/* FIX 7: Preview Visual Upgrade (Chart & Confidence Bar) */}
+                                        <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <TrendingUp size={14} className="text-primary" /> 
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Projected Performance</span>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 relative overflow-hidden">
-                                    <div className="flex items-center gap-2.5 mb-4 relative z-10">
-                                        <Zap size={14} className="text-primary" fill="currentColor" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Live Signal Insights</h4>
-                                    </div>
-                                    <div className="space-y-4 relative z-10">
-                                        {previewData.recent_signals.length > 0 ? previewData.recent_signals.map((sig, i) => (
-                                            <div key={i} className="flex items-start gap-3 text-[11px] text-white/90 font-medium leading-relaxed italic animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
-                                                <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                                                {sig}
+                                                <div className="text-[8px] font-bold text-muted uppercase tracking-widest opacity-40">7-Day Simulation</div>
                                             </div>
-                                        )) : (
-                                            <p className="text-[10px] text-muted uppercase font-bold tracking-widest animate-pulse">Scanning social signals...</p>
+                                            <div className="h-20 w-full flex items-center justify-center bg-black/20 rounded-xl border border-white/5 p-4 mb-4">
+                                                <Sparkline 
+                                                    data={newStrat.selectedSources.length === 0 ? [5, 12, 8, 15, 25, 20, 32] : [10, 18, 14, 22, 35, 28, 42]} 
+                                                    color="#3b82f6" 
+                                                    width={300} 
+                                                    height={60} 
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[9px] font-bold text-muted uppercase tracking-widest">Intelligence Confidence</span>
+                                                    <span className="text-[9px] font-black text-white uppercase tracking-widest">
+                                                        {newStrat.selectedSources.length === 0 ? '74%' : `${previewData.confidence_score}%`}
+                                                    </span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px] relative">
+                                                    {/* Gradient Confidence Bar (Red to Green) */}
+                                                    <div 
+                                                        className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-danger via-amber-500 to-success shadow-[0_0_10px_rgba(34,197,94,0.3)]" 
+                                                        style={{ width: `${newStrat.selectedSources.length === 0 ? 74 : previewData.confidence_score}%` }} 
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Intelligence Feed (Merged & Actionable) */}
+                                        <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 relative overflow-hidden group">
+                                            <div className="flex items-center gap-2.5 mb-4 relative z-10">
+                                                <Zap size={14} className="text-primary animate-pulse" fill="currentColor" />
+                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Intelligence Stream</h4>
+                                            </div>
+                                            <div className="space-y-4 relative z-10">
+                                                {(newStrat.selectedSources.length > 0 ? previewData.recent_signals : [
+                                                    "🐳 Whale identified: 0x42... entering 'Yes' on ETH ETF Approval",
+                                                    "🎯 Sniper 0x1A... just took a size position on 'US Election Results'",
+                                                    "⚡ Momentum shift detected in 'Fed Rate Decision' market"
+                                                ]).map((sig, i) => (
+                                                    <div key={sig} className="flex items-start gap-3 text-[10px] text-white/80 font-medium leading-relaxed italic animate-in fade-in slide-in-from-left-2" style={{ transitionDelay: `${i * 150}ms` }}>
+                                                        <div className="mt-1.5 w-1 h-1 rounded-full bg-primary shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
+                                                        {sig}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Subtle Decorative Gradient */}
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[40px] rounded-full -mr-16 -mt-16" />
+                                        </div>
+
+                                        {/* Source Context (Only if active) */}
+                                        {newStrat.selectedSources.length > 0 && (
+                                            <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5 animate-in fade-in duration-500">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <Users size={14} className="text-white/40" />
+                                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-white/40">Active Oracles</h4>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {newStrat.selectedSources.map(addr => {
+                                                        const src = settings.copy_sources.find(s => s.address === addr);
+                                                        return (
+                                                            <div key={addr} className="flex items-center gap-2 bg-white/5 py-1.5 px-2.5 rounded-lg border border-white/5 hover:border-primary/30 transition-all">
+                                                                <div className="w-4 h-4 rounded bg-primary/20 flex items-center justify-center text-[8px] font-black text-primary">
+                                                                    {src?.name?.charAt(0) || 'W'}
+                                                                </div>
+                                                                <span className="text-[9px] font-bold text-white/70">{src?.name || addr.substring(0, 6)}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                                        <Activity size={120} className="text-primary" />
-                                    </div>
-                                </div>
+                                )}
                             </div>
-                        )}
-                        
-                        <div className="mt-14 p-4 bg-white/[0.03] rounded-xl border border-white/5 flex items-center justify-center gap-3">
-                            <Check size={14} className="text-success" />
-                            <span className="text-[9px] font-bold uppercase text-muted tracking-[0.2em]">Institutional Grade Simulation</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Section 4: Performance Console (Phase 5 Refined) */}
-            <div className="glass-panel iridescent-border mb-12" style={{ padding: '0', overflow: 'hidden' }}>
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                    <div className="p-8 text-center hover:bg-white/[0.02] transition-all group">
-                        <div className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mb-4 opacity-60 group-hover:opacity-100 transition-opacity">Global Strategy Rank</div>
-                        <div className="text-4xl font-black text-white tracking-tighter mb-3 scale-100 group-hover:scale-105 transition-transform">#{portfolio.global_rank || '1,284'}</div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                            <Zap size={10} className="text-primary" fill="currentColor" />
-                            <span className="text-[9px] font-black text-primary uppercase tracking-widest">
-                                {portfolio.global_rank < 100 ? 'Top 1% Elite' : portfolio.global_rank < 500 ? 'Top 5% Performance' : 'Global Participant'}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div className="p-8 text-center hover:bg-white/[0.02] transition-all group border-white/10">
-                        <div className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mb-4 opacity-60 group-hover:opacity-100 transition-opacity">Weekly Goal Progress</div>
-                        <div className="text-4xl font-black text-white tracking-tighter mb-4">
-                            {Math.min(100, Math.round((portfolio.total_pnl / 400) * 100))}%
-                        </div>
-                        <div className="w-48 h-1.5 bg-white/5 rounded-full mx-auto overflow-hidden border border-white/5">
-                            <div 
-                                className="h-full bg-accent shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all duration-1000" 
-                                style={{ width: `${Math.min(100, Math.round((portfolio.total_pnl / 400) * 100))}%` }} 
-                            />
-                        </div>
-                        <div className="text-[9px] font-bold text-accent uppercase tracking-widest mt-3 opacity-80">
-                            ${portfolio.total_pnl.toFixed(0)} / $400 Target
-                        </div>
-                    </div>
-                    
-                    <div className="p-8 text-center hover:bg-white/[0.02] transition-all group">
-                        <div className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mb-4 opacity-60 group-hover:opacity-100 transition-opacity">Active Win Streak</div>
-                        <div className="text-4xl font-black text-profit tracking-tighter mb-3">
-                             {portfolio.accuracy > 70 ? '5+' : '3'} <span className="text-sm font-bold text-muted/60">Wins</span>
-                        </div>
-                        <div className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center justify-center gap-2 opacity-80">
-                            <TrendingUp size={10} /> Consecutive Accuracy Bonus
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Section 5: Active Strategies List (Phase 9 Cleaner) */}
+            {/* FIX 8: CompactStats (Simplified Gamification) */}
             <div className="mb-14">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-2.5">
-                        <Activity size={18} className="text-white/40" />
-                        <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-[0.2em]">Running Strategy Units</h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/5">
-                        <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-                        <span className="text-[9px] font-bold text-success uppercase tracking-widest">{strategies.filter(s => s.status === 'active').length} Active</span>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5">
-                    {strategies.length > 0 ? strategies.map((s, idx) => (
-                        <div key={idx} className="glass-panel group hover:border-primary/30 transition-all duration-500 overflow-hidden" style={{ padding: '0' }}>
-                            <div className="flex flex-col md:flex-row md:items-center">
-                                {/* Left Side: Status & Info */}
-                                <div className="flex-1 p-6 flex items-center gap-5 border-b md:border-b-0 md:border-r border-white/5">
-                                    <div className={`p-3.5 rounded-2xl ${s.status === 'active' ? 'bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'bg-white/5 text-muted'} transition-all group-hover:scale-110`}>
-                                        <TrendingUp size={24} />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2.5 mb-1.5">
-                                            <h4 className="text-sm font-black text-white tracking-wide">{s.name}</h4>
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest border ${s.status === 'active' ? 'bg-success/10 text-success border-success/20' : 'bg-white/5 text-muted border-white/10'}`}>
-                                                {s.status}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-1 text-[10px] text-muted font-bold uppercase tracking-widest">
-                                                <Target size={12} className="opacity-40" /> {s.platform}
-                                            </div>
-                                            <div className="w-1 h-1 bg-white/10 rounded-full" />
-                                            <div className="text-[10px] text-muted font-bold uppercase tracking-widest flex items-center gap-1">
-                                                <Settings size={12} className="opacity-40" /> {s.riskMode || 'Balanced'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Center: Metrics */}
-                                <div className="p-6 flex items-center gap-12 border-b md:border-b-0 md:border-r border-white/5">
-                                    <div>
-                                        <div className="text-[9px] font-bold text-muted uppercase tracking-widest mb-1.5 opacity-60">Balance</div>
-                                        <div className="text-lg font-black text-white tracking-tighter">${parseFloat(s.strategy_balance || 0).toLocaleString()}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[9px] font-bold text-muted uppercase tracking-widest mb-1.5 opacity-60">Net PnL</div>
-                                        <div className={`text-lg font-black tracking-tighter ${s.simulated_pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                            {s.simulated_pnl >= 0 ? '+' : ''}${Math.abs(parseFloat(s.simulated_pnl || 0)).toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div className="text-right border-l border-white/10 pl-4 hidden md:block">
-                                        <div className="text-[9px] font-bold text-muted uppercase tracking-widest mb-1.5 opacity-60">Growth</div>
-                                        <div className="text-lg font-black text-white tracking-tighter">7.2%</div>
-                                    </div>
-                                </div>
-
-                                {/* Right Side: Sources & Actions */}
-                                <div className="p-6 flex items-center justify-between md:justify-end gap-6 bg-white/[0.01]">
-                                    <div className="flex -space-x-3">
-                                        {s.source_addresses.slice(0, 3).map((addr, i) => (
-                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0a0d14] bg-primary/20 flex items-center justify-center hover:z-10 transition-transform hover:scale-110 cursor-help" title={addr}>
-                                                <span className="text-[10px] font-black text-primary">W</span>
-                                            </div>
-                                        ))}
-                                        {s.source_addresses.length > 3 && (
-                                            <div className="w-8 h-8 rounded-full border-2 border-[#0a0d14] bg-white/5 flex items-center justify-center">
-                                                <span className="text-[9px] font-bold text-muted">+{s.source_addresses.length - 3}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => toggleStrategy(s.strategy_id, s.status)}
-                                            className={`p-3 rounded-xl transition-all shadow-lg ${s.status === 'active' ? 'bg-danger/10 text-danger hover:bg-danger/20 hover:scale-105' : 'bg-success/10 text-success hover:bg-success/20 hover:scale-105'}`}
-                                        >
-                                            {s.status === 'active' ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                                        </button>
-                                        <button 
-                                            onClick={() => viewTrades(s.strategy_id)}
-                                            className="p-3 bg-white/5 text-muted hover:text-white hover:bg-white/10 rounded-xl transition-all hover:scale-105"
-                                        >
-                                            <BarChart3 size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => removeStrategy(s.strategy_id)}
-                                            className="p-3 bg-danger/5 text-danger/40 hover:text-danger hover:bg-danger/10 rounded-xl transition-all hover:scale-105"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                </div>
+                <div className="glass-panel-unified p-4 flex items-center justify-between border-white/5 bg-white/[0.01]">
+                    <div className="flex items-center gap-8 px-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                                <Award size={16} />
+                            </div>
+                            <div>
+                                <div className="text-[8px] font-black text-muted uppercase tracking-[0.2em] mb-0.5 opacity-40">Global Rank</div>
+                                <div className="text-sm font-black text-white">#{portfolio.global_rank || '1,284'}</div>
                             </div>
                         </div>
-                    )) : (
-                        <div className="flex flex-col items-center justify-center py-20 bg-white/[0.01] rounded-[2rem] border border-dashed border-white/10">
-                            <Rocket size={40} className="text-white/10 mb-6" />
-                            <p className="text-[11px] font-bold text-muted uppercase tracking-[0.2em]">No Strategic Units Deployed</p>
-                            <button 
-                                onClick={() => document.getElementById('strategy-builder')?.scrollIntoView({ behavior: 'smooth' })}
-                                className="mt-6 text-[10px] font-black text-primary hover:text-white uppercase tracking-widest transition-all"
-                            >
-                                Build Your First Strategy →
-                            </button>
+                        
+                        <div className="w-px h-8 bg-white/5" />
+                        
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-accent/10 text-accent border border-accent/20">
+                                <Target size={16} />
+                            </div>
+                            <div>
+                                <div className="text-[8px] font-black text-muted uppercase tracking-[0.2em] mb-0.5 opacity-40">Weekly Goal</div>
+                                <div className="text-sm font-black text-white">${portfolio.total_pnl.toFixed(0)} / $400</div>
+                            </div>
                         </div>
-                    )}
+                        
+                        <div className="w-px h-8 bg-white/5" />
+                        
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-profit/10 text-profit border border-profit/20">
+                                <Flame size={16} />
+                            </div>
+                            <div>
+                                <div className="text-[8px] font-black text-muted uppercase tracking-[0.2em] mb-0.5 opacity-40">Win Streak</div>
+                                <div className="text-sm font-black text-profit">{portfolio.accuracy > 70 ? '5+' : '3'} Wins</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 px-6 border-l border-white/5">
+                        <div className="text-right">
+                            <div className="text-[8px] font-black text-muted uppercase tracking-widest mb-1 opacity-40">Next Milestone</div>
+                            <div className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <Zap size={10} className="text-primary" /> Top 1,000
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Section 6: Global Activity & Social Proof (Phase 6) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+            {/* FIX 6 & 10: Social Proof & Actionable AI Sidekick (Repositioned) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
+                {/* Social Proof: Signal Feed */}
                 <div className="lg:col-span-8">
                     <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-2.5">
-                            <Globe size={18} className="text-primary" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-[0.2em]">Institutional Signal Feed</h3>
-                        </div>
-                        <div className="flex items-center gap-4 text-[9px] font-bold text-muted uppercase tracking-widest">
-                            <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-success rounded-full" /> 2.1k Online</span>
-                            <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-primary rounded-full" /> 42 New Signals</span>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group">
+                                <Globe size={18} className="group-hover:rotate-12 transition-transform" />
+                            </div>
+                            <div>
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Institutional Signal Feed</h3>
+                                <div className="flex items-center gap-3 text-[9px] font-bold text-muted uppercase tracking-widest mt-1">
+                                    <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" /> 2,341 members active</span>
+                                    <div className="w-1 h-1 bg-white/10 rounded-full" />
+                                    <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-primary rounded-full" /> $1.2M total returns generated</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1131,42 +1184,134 @@ const Simulator = () => {
                     </div>
                 </div>
 
+                {/* AI Sidekick: Actionable Insights */}
                 <div className="lg:col-span-4">
-                    <div className="glass-panel iridescent-border" style={{ height: '100%', padding: '2rem' }}>
-                        <div className="flex items-center gap-2.5 mb-8">
-                            <Zap size={18} className="text-accent" fill="currentColor" />
-                            <h3 className="text-xs font-black text-white uppercase tracking-widest">AI Sidekick Analysis</h3>
+                    <div className="glass-panel-unified iridescent-border h-full flex flex-col" style={{ padding: '2rem' }}>
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                                <Zap size={18} fill="currentColor" />
+                            </div>
+                            <div>
+                                <h3 className="text-[12px] font-black text-white uppercase tracking-[0.2em]">AI Insights</h3>
+                                <p className="text-[9px] font-bold text-muted uppercase tracking-widest opacity-40">actionable alpha</p>
+                            </div>
                         </div>
                         
-                        <div className="space-y-6">
+                        <div className="space-y-6 flex-1">
                             <div className="p-5 bg-accent/5 rounded-2xl border border-accent/20 relative overflow-hidden group">
                                 <div className="relative z-10">
-                                    <div className="text-[10px] font-bold text-accent uppercase tracking-widest mb-3">Alpha Opportunity</div>
-                                    <p className="text-[11px] text-white/90 leading-relaxed font-medium">Top 5 whales are currently shifting 40% of their volume into 'Entertainment' markets. Consider a new unit for maximum alpha.</p>
-                                </div>
-                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                                    <TrendingUp size={60} className="text-accent" />
+                                    <div className="text-[10px] font-black text-accent uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Flame size={12} /> Alpha Opportunity
+                                    </div>
+                                    <p className="text-[11px] text-white/90 leading-relaxed font-medium mb-6">Whale clusters are pivoting to 'Entertainment' markets. This historically precedes a 15% ROI spike in momentum strategies.</p>
+                                    
+                                    <div className="flex flex-col gap-2">
+                                        <button 
+                                            onClick={() => applyTemplate(STRATEGY_TEMPLATES[2])}
+                                            className="w-full py-3 bg-accent/20 hover:bg-accent/30 text-accent text-[9px] font-black uppercase tracking-widest rounded-xl border border-accent/30 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Check size={12} /> Apply Optimization
+                                        </button>
+                                        <button 
+                                            onClick={() => recommendTraders()}
+                                            className="w-full py-3 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10 transition-all"
+                                        >
+                                            Auto-Inject Sources
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[10px] font-bold text-muted uppercase">Global Confidence</span>
-                                    <span className="text-[10px] font-black text-white">82%</span>
+                                    <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Confidence Score</span>
+                                    <span className="text-sm font-black text-white">82%</span>
                                 </div>
-                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.3)]" style={{ width: '82%' }} />
+                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
+                                    <div className="h-full bg-primary shadow-[0_0_15px_rgba(59,130,246,0.4)] rounded-full" style={{ width: '82%' }} />
                                 </div>
-                                <p className="text-[9px] text-muted uppercase font-bold tracking-tighter opacity-60">Calculated from 2.4k active signal sources</p>
                             </div>
-
-                            <button className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl border border-white/10 transition-all">
-                                Get More Insights
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+            {/* FIX 9: Cleaned Active Strategies (Collapsed if empty) */}
+            {strategies.length > 0 && (
+                <div className="mb-14 animate-in slide-in-from-bottom-5 duration-700">
+                    <div className="flex items-center justify-between mb-8 opacity-60 hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2.5">
+                            <Activity size={18} className="text-primary" />
+                            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Operational Units</h3>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                            <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">{strategies.filter(s => s.status === 'active').length} Synchronized</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                        {strategies.map((s, idx) => (
+                            <div key={idx} className="glass-panel-unified group hover:bg-white/[0.03] hover:border-primary/20 transition-all duration-300 overflow-hidden" style={{ padding: '0' }}>
+                                <div className="flex flex-col md:flex-row md:items-center">
+                                    {/* Left: Unit Info */}
+                                    <div className="flex-1 p-5 flex items-center gap-4 border-b md:border-b-0 md:border-r border-white/5">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.status === 'active' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted'} transition-all group-hover:scale-110 shadow-lg shadow-black/20`}>
+                                            <TrendingUp size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="text-sm font-black text-white tracking-tight">{s.name}</h4>
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'active' ? 'bg-success animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-white/10'}`} />
+                                            </div>
+                                            <div className="text-[9px] font-bold text-muted uppercase tracking-widest opacity-40">{s.platform} • {s.riskMode || 'Balanced'}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Center: Performance */}
+                                    <div className="px-8 py-5 flex items-center gap-10 border-b md:border-b-0 md:border-r border-white/5">
+                                        <div className="hidden sm:block">
+                                            <div className="text-[8px] font-black text-muted uppercase tracking-widest mb-1 opacity-40">Capital</div>
+                                            <div className="text-sm font-black text-white">${parseFloat(s.strategy_balance || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[8px] font-black text-muted uppercase tracking-widest mb-1 opacity-40">Return</div>
+                                            <div className={`text-sm font-black flex items-center gap-1.5 ${s.simulated_pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                                                {s.simulated_pnl >= 0 ? '+' : '-'}${Math.abs(parseFloat(s.simulated_pnl || 0)).toFixed(2)}
+                                                <span className="text-[8px] opacity-40">(7.2%)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Actions */}
+                                    <div className="p-5 flex items-center justify-between md:justify-end gap-5 bg-white/[0.01]">
+                                        <div className="flex items-center gap-1.5">
+                                            <button 
+                                                onClick={() => toggleStrategy(s.strategy_id, s.status)}
+                                                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-md ${s.status === 'active' ? 'bg-danger/10 text-danger hover:bg-danger/20' : 'bg-success/10 text-success hover:bg-success/20'}`}
+                                            >
+                                                {s.status === 'active' ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                                            </button>
+                                            <button 
+                                                onClick={() => viewTrades(s.strategy_id)}
+                                                className="w-9 h-9 flex items-center justify-center bg-white/5 text-muted hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                            >
+                                                <BarChart3 size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => removeStrategy(s.strategy_id)}
+                                                className="w-9 h-9 flex items-center justify-center bg-danger/5 text-danger/30 hover:text-danger hover:bg-danger/10 rounded-xl transition-all"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
 
             {/* Trade History Modal (Keeping existing logic) */}
             {selectedStratTrades !== null && (
@@ -1227,4 +1372,4 @@ const Simulator = () => {
     );
 };
 
-export default Simulator;
+export default StrategySandbox;

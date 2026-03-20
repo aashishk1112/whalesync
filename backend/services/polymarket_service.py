@@ -222,14 +222,21 @@ class PolymarketService:
                         adj_roi, win_rate, vol, consistency, max_dd
                     )
                     
+                    # Calculate ROI and cap extreme outliers for a premium UI feel
+                    raw_roi = (pnl / max(1.0, vol)) * 100.0
+                    adj_roi_val = adj_roi * 100.0
+                    
+                    roi_val = min(999.9, max(-999.9, raw_roi))
+                    adj_roi_val = min(999.9, max(-999.9, adj_roi_val))
+                    
                     p_trader = {
                         "rank": t.get("rank"),
                         "username": t.get("userName") or t.get("pseudonym") or "Anonymous Whale",
                         "address": address,
                         "pnl": pnl,
                         "volume": vol,
-                        "roi": (pnl / max(1.0, vol)) * 100.0,
-                        "adjusted_roi": adj_roi * 100.0,
+                        "roi": roi_val,
+                        "adjusted_roi": adj_roi_val,
                         "win_rate": win_rate,
                         "total_trades": deep_stats.get("total_trades", 0),
                         "risk_score": risk_score,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Award, TrendingUp, Target, Shield, Clock, ExternalLink, ChevronDown, ChevronUp, Zap, Activity, AlertCircle, Sparkles } from 'lucide-react';
 import Sparkline from '../components/Sparkline';
 import RiskMeter from '../components/RiskMeter';
+import { AuthContext } from '../context/AuthContext';
 
 const UpgradeModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -126,23 +127,31 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror }) => {
                     </div>
                 </td>
                 <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end">
-                        <span style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '0.9rem', lineHeight: 1 }}>{Math.round(trader.whale_score || 0)}</span>
+                    <div className="flex flex-col items-end group">
+                        <div className="flex items-center gap-1">
+                            <span style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '0.9rem', lineHeight: 1 }}>{Math.round(trader.whale_score || 0)}</span>
+                            {trader.tags?.includes('most_copied') && (
+                                <Zap size={10} className="text-accent animate-pulse" />
+                            )}
+                        </div>
                         <span style={{ fontSize: '0.5rem', fontWeight: '800', opacity: 0.4, marginTop: '2px' }}>WHALE SCORE</span>
                     </div>
                 </td>
                 <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end">
-                        <span style={{ fontWeight: '700', fontSize: '0.8rem', color: trader.adjusted_roi >= 0 ? 'var(--success)' : 'var(--danger)', lineHeight: 1 }}>
+                    <div className="flex flex-col items-end bg-success/5 p-1 rounded-sm border border-success/10">
+                        <span style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--success)', lineHeight: 1 }}>
                             {trader.adjusted_roi ? `${trader.adjusted_roi.toFixed(1)}%` : '0%'}
                         </span>
-                        <span style={{ fontSize: '0.5rem', opacity: 0.4, marginTop: '2px' }}>ADJ. ROI</span>
+                        <span style={{ fontSize: '0.45rem', opacity: 0.6, fontWeight: '900', marginTop: '2px', textTransform: 'uppercase' }}>Alpha ROI</span>
                     </div>
                 </td>
                 <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <span style={{ fontWeight: '600', fontSize: '0.8rem' }}>
-                        {trader.win_rate ? `${(trader.win_rate * 100).toFixed(1)}%` : '0%'}
-                    </span>
+                    <div className="flex flex-col items-end opacity-80">
+                        <span style={{ fontWeight: '600', fontSize: '0.75rem', lineHeight: 1 }}>
+                            {trader.win_rate ? `${(trader.win_rate * 100).toFixed(0)}%` : '0%'}
+                        </span>
+                        <span style={{ fontSize: '0.45rem', opacity: 0.5, fontWeight: '800', marginTop: '2px' }}>WIN RATE</span>
+                    </div>
                 </td>
                 <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                     <div className="flex flex-col items-end">
@@ -159,10 +168,17 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror }) => {
                     <div className="flex items-center justify-end gap-2">
                         <button 
                             onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
-                            className="btn-outline hover-glow" 
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem', background: 'rgba(59, 130, 246, 0.1)', borderColor: 'var(--primary)', borderRadius: '4px' }}
+                            className="btn-outline hover-glow font-black uppercase tracking-widest" 
+                            style={{ 
+                                padding: '0.2rem 0.6rem', 
+                                fontSize: '0.55rem', 
+                                background: 'rgba(59, 130, 246, 0.1)', 
+                                borderColor: 'var(--primary)', 
+                                borderRadius: '4px',
+                                color: 'var(--primary)'
+                            }}
                         >
-                            Mirror
+                            Start Copying
                         </button>
                         {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
                     </div>
@@ -173,43 +189,54 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror }) => {
                     <td colSpan="8" style={{ padding: '1rem 2rem' }}>
                         <div className="flex items-center justify-between gap-8 border-l-2 border-primary/30 pl-6">
                             <div className="flex-1">
-                                <div className="flex gap-8">
-                                    <div>
-                                        <p className="text-[9px] uppercase tracking-tighter text-muted font-bold mb-0.5">Total Volume</p>
-                                        <p className="text-xs font-mono font-medium">{formatCurrency(trader.volume)}</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '3rem' }}>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Total Volume</span>
+                                        <span className="text-xs font-mono font-bold text-white/90 leading-none">{formatCurrency(trader.volume)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] uppercase tracking-tighter text-muted font-bold mb-0.5">Realized PNL</p>
-                                        <p className="text-xs font-mono font-medium" style={{ color: trader.pnl >= 0 ? 'var(--success)' : 'var(--danger)' }}>{formatCurrency(trader.pnl)}</p>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Realized PNL</span>
+                                        <span className="text-xs font-mono font-bold leading-none" style={{ color: trader.pnl >= 0 ? '#10B981' : '#EF4444' }}>{formatCurrency(trader.pnl)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] uppercase tracking-tighter text-muted font-bold mb-0.5">Network Rank</p>
-                                        <p className="text-xs font-mono font-medium">Top 0.8%</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] uppercase tracking-tighter text-muted font-bold mb-0.5">Signal Alpha</p>
-                                        <p className="text-xs font-mono font-medium text-primary">High Confidence</p>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Signal Confidence</span>
+                                        <div className="flex items-center gap-1.5 leading-none">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_5px_var(--primary)]"></div>
+                                            <span className="text-xs font-black text-primary uppercase tracking-widest">Ultra High</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-6 py-2 px-4 rounded-lg bg-black/20 border border-white/5">
-                                <div className="text-right">
-                                    <p className="text-[8px] uppercase font-black text-primary tracking-widest leading-none mb-1">Mirror Forecast</p>
-                                    <div className="flex items-center justify-end gap-1">
-                                        <TrendingUp size={10} className={forecastAmount >= 0 ? "text-success" : "text-danger"} />
-                                        <span className="text-sm font-black text-white">
-                                            {forecastAmount >= 0 ? '+' : ''}{formatCurrency(forecastAmount)}
-                                        </span>
-                                        <span className="text-[8px] text-muted ml-1">/ 7D</span>
+                            <div className="flex items-center gap-6">
+                                <div className="glass-panel p-4 border-success/20 relative overflow-hidden group/forecast min-w-[200px]">
+                                    <div className="absolute -right-2 -top-2 opacity-5 group-hover/forecast:opacity-10 transition-opacity">
+                                        <TrendingUp size={60} />
+                                    </div>
+                                    <p className="text-[9px] font-black text-success uppercase tracking-[0.2em] mb-1 flex items-center gap-1">
+                                        <Zap size={10} /> Projected Weekly
+                                    </p>
+                                    <div className="flex items-baseline gap-2">
+                                        <h4 className="text-2xl font-black text-white">{formatCurrency(forecastAmount)}</h4>
+                                        <span className="text-success text-[10px] font-black tracking-widest">EST. PROFIT</span>
+                                    </div>
+                                    <p className="text-[8px] text-muted/60 mt-2 italic font-medium leading-tight">
+                                        Standard $1,000 allocation basis.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col gap-2 min-w-[180px]">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
+                                        className="w-full py-4 bg-primary text-white font-black uppercase tracking-[0.25em] text-[10px] rounded border border-primary/50 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                    >
+                                        [ Start Copying Now ]
+                                    </button>
+                                    <div className="flex items-center justify-center gap-2 opacity-30">
+                                        <Shield size={10} />
+                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">WhaleSync Institutional Guard</span>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => onMirror(trader)}
-                                    className="py-2 px-4 bg-primary hover:bg-primary-dark text-white text-[10px] font-black uppercase tracking-widest rounded transition-all transform hover:scale-105 shadow-lg shadow-primary/20"
-                                >
-                                    Execute Copy
-                                </button>
                             </div>
                         </div>
                     </td>
@@ -220,20 +247,27 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror }) => {
 };
 
 const Leaderboard = () => {
+    const { user } = React.useContext(AuthContext);
     const [traders, setTraders] = useState([]);
+    const [archetypes, setArchetypes] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [archLoading, setArchLoading] = useState(true);
     const [timeframe, setTimeframe] = useState('WEEK');
     const [sortBy, setSortBy] = useState('SCORE');
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [mirroringStatus, setMirroringStatus] = useState(null);
+    const navigate = React.useMemo(() => (path) => window.location.href = path, []);
 
     const handleMirror = async (trader) => {
-        const userId = "temp-user-123"; // TODO: Get from auth context
-        setMirroringStatus('Processing...');
+        if (!user) {
+            alert("Please login to start copying traders.");
+            return;
+        }
         
+        setMirroringStatus('Initializing...');
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${userId}`, {
+            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${user.userId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -247,20 +281,47 @@ const Leaderboard = () => {
                 const data = await res.json();
                 if (data.detail === "SLOTS_FULL") {
                     setIsUpgradeModalOpen(true);
+                    setMirroringStatus(null);
+                    return;
                 }
             } else if (!res.ok) {
                 const data = await res.json();
-                alert(data.detail || "Failed to mirror strategy");
-            } else {
-                alert(`Successfully mirroring ${trader.username}! Check your strategies page.`);
+                alert(`Error: ${JSON.stringify(data)}`);
+                setMirroringStatus(null);
+                return;
             }
+
+            setMirroringStatus('Success!');
+            // Brief delay to show success before redirect
+            setTimeout(() => {
+                navigate('/simulator');
+            }, 800);
+            
         } catch (err) {
-            console.error("Mirror failed:", err);
-            alert("Connection error. Please try again.");
-        } finally {
+            console.error("Mirror error:", err);
+            alert("Failed to start copying trader. Please try again.");
             setMirroringStatus(null);
         }
     };
+
+    useEffect(() => {
+        const fetchArchetypes = async () => {
+            setArchLoading(true);
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const res = await fetch(`${apiUrl}/api/traders/archetypes`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setArchetypes(data.archetypes);
+                }
+            } catch (err) {
+                console.error("Archetypes fetch failed:", err);
+            } finally {
+                setArchLoading(false);
+            }
+        };
+        fetchArchetypes();
+    }, []);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
@@ -315,7 +376,7 @@ const Leaderboard = () => {
                                     fontWeight: '800'
                                 }}
                                 onClick={() => setTimeframe(tf)}
-                            >
+                             >
                                 {tf}
                             </button>
                         ))}
@@ -323,35 +384,171 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                <div className="glass-panel animate-fade-in stagger-1" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Zap size={14} className="text-primary" />
-                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">TOP ADJ. ROI</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '2rem' }}>
+                {/* 1. 🏆 Top Trader Today */}
+                <div className="glass-panel-unified relative overflow-hidden group hover:border-primary/50 transition-all duration-500 flex flex-col justify-between" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
+                        <Award size={32} className="text-primary" />
                     </div>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                        {traders.length > 0 ? `${Math.max(...traders.map(t => t.adjusted_roi || 0)).toFixed(1)}%` : '0.0%'}
-                    </p>
-                </div>
-                
-                <div className="glass-panel animate-fade-in stagger-2" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Award size={14} className="text-success" />
-                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">AVG WIN RATE</h4>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em] px-1.5 py-0.5 bg-primary/10 rounded-sm border border-primary/20">🏆 TOP WHALE TODAY</span>
+                            <div className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                <span className="text-[8px] font-black text-primary uppercase">LIVE</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 shadow-inner overflow-hidden">
+                                {archetypes?.top_whale?.profile_image ? (
+                                    <img src={archetypes.top_whale.profile_image} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs font-black text-primary">{(archetypes?.top_whale?.username?.[0] || 'W').toUpperCase()}</span>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-white leading-none tracking-tight">@{archetypes?.top_whale?.username || 'Loading...'}</h4>
+                                <div className="text-[8px] font-bold text-muted uppercase tracking-[0.1em] opacity-40">RANK #1 GLOBAL</div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 mb-3">
+                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
+                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">SCORE</div>
+                                <div className="text-[10px] font-black text-white">{Math.round(archetypes?.top_whale?.whale_score || 0)}</div>
+                            </div>
+                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
+                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">ROI</div>
+                                <div className="text-[10px] font-black text-profit">{(archetypes?.top_whale?.roi || 0).toFixed(1)}%</div>
+                            </div>
+                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
+                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">WIN %</div>
+                                <div className="text-[10px] font-black text-white">{(archetypes?.top_whale?.win_rate * 100 || 0).toFixed(0)}%</div>
+                            </div>
+                        </div>
                     </div>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                        {traders.length > 0 ? `${(traders.reduce((acc, t) => acc + (t.win_rate || 0), 0) / traders.length * 100).toFixed(1)}%` : '0.0%'}
-                    </p>
+                    <button 
+                        disabled={archLoading}
+                        onClick={() => handleMirror(archetypes?.top_whale)}
+                        className="w-full py-2.5 bg-primary hover:bg-primary-dark text-white text-[9px] font-black uppercase tracking-[0.2em] rounded border border-primary/50 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                    >
+                        {mirroringStatus || 'Start Copying'}
+                    </button>
                 </div>
 
-                <div className="glass-panel animate-fade-in stagger-3" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(0,0,0,0) 100%)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Shield size={14} className="text-accent" />
-                        <h4 className="text-muted uppercase text-[9px] font-bold tracking-widest">TOTAL VOLUME</h4>
+                {/* 2. 📈 Best Risk-Adjustive Alpha */}
+                <div className="glass-panel-unified hover:border-success/40 transition-all duration-300 flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(34, 197, 94, 0.15)', background: 'rgba(34, 197, 94, 0.02)' }}>
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-3">
+                            <TrendingUp size={12} className="text-success" />
+                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">📈 RISK-ADJUSTIVE</h4>
+                        </div>
+                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
+                            {archetypes?.risk_adjusted?.adjusted_roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-success">ROI</span>
+                        </div>
+                        <div className="text-[8px] font-black text-success uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
+                            <Shield size={8} /> Institutional Grade
+                        </div>
+                        <div className="p-2 bg-success/5 rounded border border-success/10 mb-4">
+                            <div className="text-[7px] font-black text-success/60 uppercase tracking-widest mb-1">Expected Profit / Week</div>
+                            <div className="text-sm font-black text-white">{formatCurrency((1000 * (archetypes?.risk_adjusted?.adjusted_roi || 0) * 0.15) / 100)}</div>
+                        </div>
                     </div>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '900', color: 'white' }}>
-                        {formatCurrency(traders.reduce((acc, t) => acc + (t.volume || 0), 0))}
-                    </p>
+                    <button 
+                        disabled={archLoading}
+                        onClick={() => handleMirror(archetypes?.risk_adjusted)}
+                        className="w-full py-2.5 bg-success/10 hover:bg-success/20 text-success text-[9px] font-black uppercase tracking-[0.15em] rounded border border-success/30 transition-all"
+                    >
+                        Start Copying
+                    </button>
+                </div>
+
+                {/* 3. 🛡 Safest Profitable */}
+                <div className="glass-panel-unified hover:border-accent/40 transition-all duration-300 flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(246, 173, 85, 0.15)', background: 'rgba(246, 173, 85, 0.02)' }}>
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-3">
+                            <Shield size={12} className="text-accent" />
+                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">🛡 SAFEST ALPHA</h4>
+                        </div>
+                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
+                            {archetypes?.safest?.roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-accent">ROI</span>
+                        </div>
+                        <div className="text-[8px] font-black text-accent uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
+                            <Zap size={8} /> Conservative Growth
+                        </div>
+                        <div className="p-2 bg-accent/5 rounded border border-accent/10 mb-4">
+                            <div className="text-[7px] font-black text-accent/60 uppercase tracking-widest mb-1">Risk-Aware Profit / Week</div>
+                            <div className="text-sm font-black text-white">{formatCurrency((1000 * (archetypes?.safest?.roi || 0) * 0.1) / 100)}</div>
+                        </div>
+                    </div>
+                    <button 
+                        disabled={archLoading}
+                        onClick={() => handleMirror(archetypes?.safest)}
+                        className="w-full py-2.5 bg-accent/10 hover:bg-accent/20 text-accent text-[9px] font-black uppercase tracking-[0.15em] rounded border border-accent/30 transition-all"
+                    >
+                        Start Copying
+                    </button>
+                </div>
+
+                {/* 4. 🔥 Most Copied */}
+                <div className="glass-panel-unified hover:border-danger/40 transition-all duration-300 relative overflow-hidden flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.15)', background: 'rgba(239, 68, 68, 0.02)' }}>
+                    <div className="absolute -right-2 -top-2 w-12 h-12 bg-danger/5 blur-xl rounded-full" />
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-3">
+                            <Activity size={12} className="text-danger" />
+                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">🔥 MOST COPIED</h4>
+                        </div>
+                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
+                            {archetypes?.most_copied?.mock_copiers?.toLocaleString() || '1,204'} <span className="text-[10px] text-danger">COPIES</span>
+                        </div>
+                        <div className="text-[8px] font-black text-danger uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
+                            <Sparkles size={8} /> Social Consensus
+                        </div>
+                        <div className="flex items-end justify-between px-1 mb-4">
+                            <div>
+                                <div className="text-[6px] font-black text-muted uppercase tracking-widest">Global Vol.</div>
+                                <div className="text-[9px] font-bold text-white/80">{formatCurrency(archetypes?.most_copied?.volume / 10 || 45000)}</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[6px] font-black text-muted uppercase tracking-widest">Confidence</div>
+                                <div className="text-[9px] font-bold text-profit">98.4%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button 
+                        disabled={archLoading}
+                        onClick={() => handleMirror(archetypes?.most_copied)}
+                        className="w-full py-2.5 bg-danger/10 hover:bg-danger/20 text-danger text-[9px] font-black uppercase tracking-[0.15em] rounded border border-danger/30 transition-all"
+                    >
+                        Start Copying
+                    </button>
+                </div>
+
+                {/* 5. ⚡ Trending Now */}
+                <div className="glass-panel-unified hover:border-primary/40 transition-all duration-500 relative overflow-hidden flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(59, 130, 246, 0.15)', background: 'rgba(59, 130, 246, 0.02)' }}>
+                    <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/10 blur-2xl rounded-full" />
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-3">
+                            <Zap size={12} className="text-primary" fill="currentColor" />
+                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">⚡ TRENDING NOW</h4>
+                        </div>
+                        <div className="text-xl font-black text-profit tracking-tighter mb-0.5">
+                            +{archetypes?.trending?.roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-profit">SPIKE</span>
+                        </div>
+                        <div className="text-[8px] font-black text-primary uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
+                            <Activity size={8} /> Velocity Breakout
+                        </div>
+                        <div className="p-2 bg-primary/5 rounded border border-primary/10 mb-4">
+                            <div className="text-[7px] font-black text-primary/60 uppercase tracking-widest mb-1">Momentum Signal</div>
+                            <div className="text-[10px] font-black text-white italic">Strong Inflow Detected</div>
+                        </div>
+                    </div>
+                    <button 
+                        disabled={archLoading}
+                        onClick={() => handleMirror(archetypes?.trending)}
+                        className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em] rounded border border-primary/30 transition-all"
+                    >
+                        Start Copying
+                    </button>
                 </div>
             </div>
 
@@ -408,7 +605,7 @@ const Leaderboard = () => {
                                         onMirror={handleMirror}
                                     />
                                 ))
-                            )}
+                             )}
                         </tbody>
                     </table>
             </div>

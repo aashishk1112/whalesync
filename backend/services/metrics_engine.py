@@ -83,5 +83,16 @@ class TagEngine:
             older = pnl_history[-5:-2]
             if sum(recent) > sum(older):
                 tags.append("momentum")
+        
+        # NEW: Trending Now (High ROI spike)
+        roi = trader.get("roi", 0)
+        if roi > 50:
+            tags.append("trending")
+            
+        # NEW: Most Copied (Proxy: High Volume/Whale Score)
+        volume = trader.get("volume", 0)
+        whale_score = trader.get("whale_score", 0)
+        if volume > 1000000 or whale_score > 85:
+            tags.append("most_copied")
                 
         return tags
