@@ -1,8 +1,106 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Brain, Target, Globe, Zap } from 'lucide-react';
+import { Activity, Brain, Target, Globe, Zap, Clock, Sparkles, Shield, TrendingUp, BarChart3, Users } from 'lucide-react';
+
+const AlphaTicker = () => {
+    const opportunities = [
+        { label: "US Election Whale Activity", amount: "$124,500", time: "2m left", type: "CRITICAL" },
+        { label: "Crypto Sentiment Spike", amount: "+$4.2k Potential", time: "8m left", type: "HOT" },
+        { label: "OracleWhale just entered YES", amount: "$18,000", time: "Just now", type: "WHALE" },
+        { label: "New Alpha Signal: BTC ETF", amount: "94% Conf", time: "15m left", type: "SIGNAL" }
+    ];
+
+    return (
+        <div className="w-full bg-primary/10 border-b border-primary/20 h-10 flex items-center overflow-hidden whitespace-nowrap relative z-[60]">
+            <div className="absolute left-0 z-20 h-full flex items-center px-4 bg-primary text-[8px] font-black uppercase tracking-[0.2em] text-white">
+                LIVE ALPHA
+            </div>
+            <div className="flex gap-12 animate-marquee pl-32">
+                {[...opportunities, ...opportunities, ...opportunities].map((op, i) => (
+                    <div key={i} className="flex items-center gap-4 text-[10px] font-bold">
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${
+                            op.type === 'CRITICAL' ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-primary/20 border-primary/40 text-primary'
+                        }`}>{op.type}</span>
+                        <span className="text-white/60 uppercase">{op.label}</span>
+                        <span className="text-emerald-400 font-black tracking-tighter">{op.amount}</span>
+                        <span className="text-white/30 font-black tracking-tighter uppercase">{op.time}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const LeaderboardPreview = () => {
+    const [traders, setTraders] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTopTraders = async () => {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const res = await fetch(`${apiUrl}/api/traders/leaderboard?timeframe=WEEK&sort_by=SCORE`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setTraders((data.traders || []).slice(0, 5));
+                }
+            } catch (err) { console.error(err); } finally { setLoading(false); }
+        };
+        fetchTopTraders();
+    }, []);
+
+    if (loading) return null;
+
+    return (
+        <div className="mt-20 w-full animate-fade-in">
+            <div className="flex items-center gap-3 mb-6 justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Active Alpha Nodes • Top Performers</span>
+            </div>
+            <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-white/5 bg-white/[0.02]">
+                            <th className="py-4 px-8 text-[9px] font-black text-slate-500 uppercase tracking-widest">Rank</th>
+                            <th className="py-4 px-8 text-[9px] font-black text-slate-500 uppercase tracking-widest">Institutional Identity</th>
+                            <th className="py-4 px-8 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Realized PnL</th>
+                            <th className="py-4 px-8 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {traders.map((trader, i) => (
+                            <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                <td className="py-4 px-8 text-xs font-black text-slate-500 tabular-nums">#0{i+1}</td>
+                                <td className="py-4 px-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-primary">
+                                            <Users size={14} />
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-black text-white uppercase tracking-tight">{trader.username || 'Anonymous Whale'}</div>
+                                            <div className="text-[8px] font-bold text-slate-600 font-mono uppercase">NODE-{trader.address?.slice(-6).toUpperCase()}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="py-4 px-8 text-right text-emerald-400 font-black text-xs tabular-nums">
+                                    +${((trader.roi || 0) * 1240).toLocaleString()}
+                                </td>
+                                <td className="py-4 px-8 text-right text-white font-black text-xs tabular-nums">
+                                    {(trader.win_rate * 100).toFixed(0)}%
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <div className="p-4 bg-primary/5 text-center">
+                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Institutional-Grade Alpha Matrix • Live Time-Series Analysis</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const Login = () => {
     const [error, setError] = useState('');
@@ -23,29 +121,40 @@ const Login = () => {
     };
 
     return (
-        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Landing Page Sections */}
-            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <section className="container" style={{ textAlign: 'center', paddingTop: '5rem', paddingBottom: '5rem', position: 'relative', zIndex: 5 }}>
-                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '2rem', color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem', marginBottom: '2rem' }}>
-                            <Zap size={14} /> The Future of Prediction Markets
-                        </div>
-                        
-                        <h2 className="text-gradient" style={{ fontSize: 'clamp(3rem, 5vw, 4.5rem)', lineHeight: 1.1, margin: '0 0 1.5rem 0', fontWeight: 800, letterSpacing: '-1px' }}>
-                            Trade like the top <span className="text-gradient-primary">1%</span>.<br />Automatically.
-                        </h2>
-                        
-                        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', margin: '0 auto 3rem auto', lineHeight: 1.6, maxWidth: '600px' }}>
-                            Analyze behavioral genomes of profitable traders, copy their strategies risk-free via our simulator, and execute live on Polymarket.
-                        </p>
+        <div className="min-h-screen bg-slate-950 text-slate-200 overflow-x-hidden animate-fade-in flex flex-col">
+            <AlphaTicker />
+            
+            <main className="flex-1 flex flex-col items-center">
+                {/* Hero Section */}
+                <section className="app-container relative z-10 pt-24 pb-16 flex flex-col items-center text-center">
+                    {/* Background Decorative Blobs */}
+                    <div className="absolute top-0 -left-20 w-[400px] h-[400px] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse" />
+                    <div className="absolute top-40 -right-20 w-[500px] h-[500px] bg-accent/10 blur-[150px] rounded-full -z-10 animate-pulse-delayed" />
 
-                        <div className="glass-panel hover-glow animate-float" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 3rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem' }}>Start your journey</h3>
+                    <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary font-black text-[10px] uppercase tracking-[0.2em] mb-8 animate-float">
+                        <Zap size={14} className="fill-primary" /> The Future of Prediction Markets
+                    </div>
+                    
+                    <h1 className="text-6xl md:text-8xl font-black text-white italic tracking-tighter leading-[0.9] mb-8 uppercase">
+                        Scale <span className="text-primary drop-shadow-[0_0_20px_rgba(59,130,246,0.4)]">Institutional</span><br />
+                        <span className="text-white">Alpha</span> Automatically.
+                    </h1>
+                    
+                    <p className="max-w-xl text-slate-400 text-lg md:text-xl font-medium leading-relaxed mb-12">
+                        Analyze behavioral genomes of profitable whales, copy strategies via the Alpha Simulator, and execute live on Polymarket.
+                    </p>
+
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="p-10 bg-slate-900/60 backdrop-blur-3xl border border-primary/30 rounded-[40px] shadow-2xl hover-glow transition-all max-w-sm w-full relative">
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-full">
+                                ACCESS TERMINAL
+                            </div>
                             
-                            {error && <div style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444', padding: '0.75rem 1.5rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>{error}</div>}
+                            <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">Initiate Neural Link</h3>
+                            
+                            {error && <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-xs font-bold">{error}</div>}
 
-                            <div style={{ transform: 'scale(1.1)' }}>
+                            <div className="flex justify-center scale-110">
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
                                     onError={() => setError('Login Failed')}
@@ -54,44 +163,55 @@ const Login = () => {
                                     text="continue_with"
                                 />
                             </div>
-                            <span className="text-muted" style={{ fontSize: '0.75rem', marginTop: '1.5rem', opacity: 0.7 }}>
-                                By signing securely with Google, you agree to our <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}>Terms</a>.
-                            </span>
+                            <p className="mt-8 text-[10px] font-medium text-slate-500 uppercase tracking-widest leading-loose">
+                                Secure end-to-end encryption via Google OAuth.<br />
+                                Agreement to <a href="#" className="text-primary hover:underline">Neural Terms</a>.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-10 mt-4">
+                            <div className="flex flex-col items-center">
+                                <span className="text-2xl font-black text-white tabular-nums">$140M+</span>
+                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Global Vol</span>
+                            </div>
+                            <div className="h-10 w-px bg-slate-800" />
+                            <div className="flex flex-col items-center">
+                                <span className="text-2xl font-black text-white tabular-nums">1.2k+</span>
+                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Active Nodes</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Background Decorative Blobs */}
-                    <div style={{ position: 'absolute', top: '10%', left: '5%', width: '300px', height: '300px', background: 'var(--primary)', filter: 'blur(150px)', opacity: 0.15, zIndex: -1, borderRadius: '50%' }} />
-                    <div style={{ position: 'absolute', bottom: '10%', right: '5%', width: '400px', height: '400px', background: 'var(--accent)', filter: 'blur(150px)', opacity: 0.1, zIndex: -1, borderRadius: '50%' }} />
+                    {/* Leaderboard Preview */}
+                    <LeaderboardPreview />
                 </section>
 
-                <section className="container" style={{ paddingBottom: '6rem', position: 'relative', zIndex: 10 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                        
-                        <div className="glass-panel hover-glow animate-float" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                                <Brain size={24} />
+                {/* Features Grid */}
+                <section className="app-container py-32 border-t border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="p-10 bg-slate-900/30 border border-white/5 rounded-[40px] hover:border-primary/30 transition-all hover-glow group">
+                            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-8 group-hover:scale-110 transition-transform">
+                                <Brain size={28} />
                             </div>
-                            <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0 0 0' }}>Behavioral Genomes</h3>
-                            <p className="text-muted" style={{ margin: 0, lineHeight: 1.6 }}>We analyze millions of on-chain data points to build psychological maps of top Polymarket earners. Discover their risk tolerance, favorite platforms, and strike rates before copying.</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic">Behavioral DNA</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed">We analyze millions of on-chain data points to build psychological maps of top Polymarket earners. Discover their risk tolerance and strike rates.</p>
                         </div>
 
-                        <div className="glass-panel hover-glow animate-float-delayed" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                <Target size={24} />
+                        <div className="p-10 bg-slate-900/30 border border-white/5 rounded-[40px] hover:border-emerald-500/30 transition-all hover-glow group">
+                            <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 transition-transform">
+                                <Target size={28} />
                             </div>
-                            <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0 0 0' }}>Paper Simulator</h3>
-                            <p className="text-muted" style={{ margin: 0, lineHeight: 1.6 }}>Deploy virtual capital ($10K starting portfolio) into our time-series simulation system. Backtest trader strategies and see exactly how much you would have earned in the real market.</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic">Alpha Simulator</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed">Deploy virtual capital ($10K starting portfolio) into our time-series simulation. Backtest trader strategies before deploying real capital.</p>
                         </div>
 
-                        <div className="glass-panel hover-glow animate-float" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>
-                                <Globe size={24} />
+                        <div className="p-10 bg-slate-900/30 border border-white/5 rounded-[40px] hover:border-red-500/30 transition-all hover-glow group">
+                            <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-8 group-hover:scale-110 transition-transform">
+                                <Zap size={28} />
                             </div>
-                            <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0 0 0' }}>1-Click Automation</h3>
-                            <p className="text-muted" style={{ margin: 0, lineHeight: 1.6 }}>Confidently link your Web3 wallet. Our market interaction system interfaces directly with Polymarket&apos;s CLOB API using Layer 2 signatures to interact with markets directly from your Proxy wallet.</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4 italic">Vector Execution</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed">Link your Web3 wallet and interface directly with Polymarket's CLOB API using Layer 2 signatures for hyper-efficient scaling.</p>
                         </div>
-
                     </div>
                 </section>
             </main>
