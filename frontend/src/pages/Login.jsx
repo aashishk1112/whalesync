@@ -17,8 +17,8 @@ const AlphaTicker = () => {
             <div className="absolute left-0 z-20 h-full flex items-center px-4 bg-primary text-[8px] font-black uppercase tracking-[0.2em] text-white">
                 LIVE ALPHA
             </div>
-            <div className="flex gap-12 animate-marquee pl-32">
-                {[...opportunities, ...opportunities, ...opportunities].map((op, i) => (
+            <div className="flex gap-12 animate-marquee">
+                {[...opportunities, ...opportunities].map((op, i) => (
                     <div key={i} className="flex items-center gap-4 text-[10px] font-bold">
                         <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${
                             op.type === 'CRITICAL' ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-primary/20 border-primary/40 text-primary'
