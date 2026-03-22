@@ -7,6 +7,10 @@ import uuid
 import random
 import string
 from boto3.dynamodb.conditions import Key, Attr
+from dotenv import load_dotenv
+
+# Load environment variables for local development
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.development"))
 
 # In SAM/Lambda environment, table names will be injected via environment variables
 env = os.environ.get("ENVIRONMENT", "dev")

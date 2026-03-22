@@ -3,7 +3,11 @@ from typing import Dict, Any, List, Optional
 import os
 import time
 from datetime import datetime
+from dotenv import load_dotenv
 import boto3
+
+# Load environment variables for local development
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.development"))
 from services.metrics_engine import MetricsEngine, TagEngine
 
 class PolymarketService:
@@ -12,7 +16,14 @@ class PolymarketService:
         self._stats_cache = {} # address -> {stats, expiry}
         
         # DynamoDB for daily snapshots
-        self.db = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'ap-south-1'))
+        region = os.getenv('AWS_REGION', 'ap-south-1')
+        endpoint = os.getenv('DYNAMODB_ENDPOINT')
+        kwargs = {'region_name': region}
+        if endpoint:
+            kwargs['endpoint_url'] = endpoint
+            print(f"[PolymarketService] Using local endpoint: {endpoint}")
+            
+        self.db = boto3.resource('dynamodb', **kwargs)
         self.table_name = os.getenv('LEADERBOARD_TABLE')
 
     def _get_db_snapshot(self, date_str: str, timeframe: str) -> Optional[List[Dict[str, Any]]]:
@@ -90,23 +101,34 @@ class PolymarketService:
             # Sort positions by date if possible (eventId/timestamp proxy)
             # For simplicity, we'll treat them as a series
             total_trades = len(positions)
-            wins = len([p for p in positions if float(p.get("cashPnl", 0)) > 0])
+            
+            def safe_float(v):
+                try: return float(v) if v is not None else 0.0
+                except: return 0.0
+
+            wins = len([p for p in positions if safe_float(p.get("cashPnl")) > 0])
             win_rate = wins / max(1, total_trades)
             
-            pnl_history = [float(p.get("cashPnl", 0)) for p in positions]
-            avg_bet_size = sum([float(p.get("totalBought", 0)) for p in positions]) / max(1, total_trades)
+            pnl_history = [safe_float(p.get("cashPnl")) for p in positions]
+            avg_bet_size = sum([safe_float(p.get("totalBought")) for p in positions]) / max(1, total_trades)
             
             # Drawdown Calculation (Cumulative Min vs Peak)
-            cum_pnl = 0
-            peak = 0
-            max_drawdown = 0
+            cum_pnl = 0.0
+            peak = 0.0
+            max_drawdown = 0.0
             history = []
             for pnl in pnl_history:
                 cum_pnl += pnl
                 history.append(cum_pnl)
                 if cum_pnl > peak:
                     peak = cum_pnl
-                dd = (peak - cum_pnl) / max(100.0, peak) if peak > 0 else 0
+                
+                # Safe divide to avoid zero peak division
+                if peak > 0:
+                    dd = (peak - cum_pnl) / peak
+                else:
+                    dd = 0.0
+                
                 if dd > max_drawdown:
                     max_drawdown = dd
             

@@ -459,19 +459,19 @@ const StrategySandbox = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12">
-                        <div className={`transition-all duration-300 ${isBuilderLocked ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100 grayscale-0 pointer-events-auto'}`}>
+                        <div className="transition-all duration-300">
                             <div className="flex justify-between items-center mb-8">
                                  <h3 className="text-xl font-black text-white uppercase tracking-tight">
                                     {wizardStep === 1 ? 'Unit Designation' : wizardStep === 2 ? 'Risk Architecture' : wizardStep === 3 ? 'Neural Sources' : 'Final Ignition'}
                                  </h3>
                                  {isBuilderLocked && (
-                                    <button onClick={() => setIsBuilderLocked(false)} className="text-[10px] font-black text-primary bg-primary/10 px-4 py-2 rounded-xl border border-primary/20 hover:bg-primary/20 transition-all uppercase tracking-widest">
+                                    <button onClick={() => setIsBuilderLocked(false)} className="pointer-events-auto text-[10px] font-black text-primary bg-primary/10 px-4 py-2 rounded-xl border border-primary/20 hover:bg-primary/20 transition-all uppercase tracking-widest">
                                         Unlock Builder
                                     </button>
                                  )}
                             </div>
 
-                            <div className="min-h-[320px]">
+                            <div className={`min-h-[320px] transition-all duration-300 ${isBuilderLocked ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100 grayscale-0 pointer-events-auto'}`}>
                                 {wizardStep === 1 && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
                                         <div className="space-y-2">
