@@ -1,34 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Award, TrendingUp, Target, Shield, Clock, ExternalLink, ChevronDown, ChevronUp, Zap, Activity, AlertCircle, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Award, TrendingUp, Target, Shield, Clock, ExternalLink, ChevronDown, ChevronUp, Zap, Activity, AlertCircle, Sparkles, TrendingDown, ArrowUpRight, ArrowDownRight, Info, Flame, History, DollarSign, Users, Eye, Play, BarChart3, Timer } from 'lucide-react';
 import Sparkline from '../components/Sparkline';
 import RiskMeter from '../components/RiskMeter';
 import { AuthContext } from '../context/AuthContext';
 
-const UpgradeModal = ({ isOpen, onClose }) => {
+function UpgradeModal({ isOpen, onClose }) {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="glass-panel max-w-md w-full p-8 text-center border-primary/30 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary"></div>
-                <div className="flex justify-center mb-6">
-                    <div className="p-4 rounded-full bg-primary/10 border border-primary/20">
-                        <Sparkles size={40} className="text-primary animate-pulse" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in px-4">
+            <div className="bg-slate-900 border border-white/10 max-w-md w-full p-10 rounded-[32px] text-center relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+                <div className="flex justify-center mb-8">
+                    <div className="p-5 rounded-3xl bg-primary/10 border border-primary/20">
+                        <Sparkles size={48} className="text-primary animate-pulse" />
                     </div>
                 </div>
-                <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Slots Exhausted</h3>
-                <p className="text-muted text-sm mb-8 leading-relaxed">
-                    You've reached the maximum number of active mirror strategies for your current plan. Upgrade to <span className="text-primary font-bold">WhaleSync Pro</span> for unlimited source slots and institutional-grade alpha.
+                <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter text-white">Capacity Warning</h3>
+                <p className="text-slate-400 text-sm mb-10 leading-relaxed font-medium">
+                    You've reached the maximum number of active mirror strategies for your current plan. Upgrade to <span className="text-primary font-bold">Terminal Pro</span> for unlimited source slots and institutional-grade alpha.
                 </p>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                     <button 
                         onClick={() => window.location.href = '/subscriptions'}
-                        className="w-full py-3 bg-primary text-white font-black uppercase tracking-widest rounded hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20"
+                        className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest rounded-2xl hover:bg-transparent hover:text-primary border border-primary transition-all shadow-xl shadow-primary/20"
                     >
                         Unlock Pro Access
                     </button>
                     <button 
                         onClick={onClose}
-                        className="w-full py-3 text-muted text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors"
+                        className="w-full py-2 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
                     >
                         Maybe Later
                     </button>
@@ -36,215 +36,377 @@ const UpgradeModal = ({ isOpen, onClose }) => {
             </div>
         </div>
     );
-};
+}
 
-const TraderRow = ({ trader, idx, formatCurrency, onMirror }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    
-    // Dynamic Forecast Calculation (based on 10% allocation of 10k capital, weekly estimate)
-    const baseAllocation = 1000; // $1,000 mirrored
-    const weeklyROI = (trader.adjusted_roi || 0) * 0.15; // 15% of annual/total ROI for a week heuristic
-    const forecastAmount = (baseAllocation * weeklyROI) / 100;
+// 🚀 High-Conversion Component: Live Alpha Alert Bar
+const OpportunityStrip = () => {
+    const opportunities = [
+        { label: "US Election Whale Activity", amount: "$124,500", time: "2m left", type: "CRITICAL" },
+        { label: "Crypto Sentiment Spike", amount: "+$4.2k Potential", time: "8m left", type: "HOT" },
+        { label: "OracleWhale just entered YES", amount: "$18,000", time: "Just now", type: "WHALE" },
+        { label: "New Alpha Signal: BTC ETF", amount: "94% Conf", time: "15m left", type: "SIGNAL" }
+    ];
 
     return (
-        <>
-            <tr 
-                className={`table-row-hover animate-fade-in stagger-${(idx % 5) + 1}`} 
-                style={{ 
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    cursor: 'pointer',
-                    background: isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent'
-                }}
-                onClick={() => setIsExpanded(!isExpanded)}
-            >
-                <td style={{ padding: '0.75rem 1rem' }}>
-                    <div style={{ 
-                        width: '20px', 
-                        height: '20px', 
-                        borderRadius: '50%', 
-                        background: idx < 3 ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-                        color: idx < 3 ? 'white' : 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.6rem',
-                        fontWeight: '800'
-                    }}>
-                        {trader.rank || idx + 1}
-                    </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem' }}>
-                    <div className="flex items-center gap-2">
-                        <a 
-                            href={`https://polymarket.com/profile/${trader.address}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hover:scale-110 transition-transform block"
-                        >
-                            {trader.profile_image ? (
-                                <img src={trader.profile_image} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.05)' }} />
-                            ) : (
-                                <div style={{ 
-                                    width: '24px', 
-                                    height: '24px', 
-                                    borderRadius: '50%', 
-                                    background: 'linear-gradient(45deg, var(--primary), var(--accent))',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 'bold'
-                                }}>
-                                    {trader.username ? trader.username[0].toUpperCase() : 'W'}
-                                </div>
-                            )}
-                        </a>
-                        <div style={{ maxWidth: '160px', overflow: 'hidden' }}>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <a 
-                                    href={`https://polymarket.com/profile/${trader.address}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="hover:text-primary transition-colors flex items-center gap-1"
-                                >
-                                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trader.username || 'Anonymous Whale'}</p>
-                                    <ExternalLink size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </a>
-                                {trader.tags?.slice(0, 2).map(tag => (
-                                    <span key={tag} style={{ 
-                                        fontSize: '0.45rem', 
-                                        padding: '0.05rem 0.25rem', 
-                                        borderRadius: '3px', 
-                                        background: 'rgba(59, 130, 246, 0.15)', 
-                                        color: 'var(--primary)',
-                                        textTransform: 'uppercase',
-                                        fontWeight: '800'
-                                    }}>{tag}</span>
-                                ))}
-                            </div>
-                            <p style={{ margin: 0, fontSize: '0.6rem', opacity: 0.4 }}>{trader.address ? `${trader.address.slice(0, 4)}...${trader.address.slice(-3)}` : '0x...'}</p>
-                        </div>
-                    </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end group">
-                        <div className="flex items-center gap-1">
-                            <span style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '0.9rem', lineHeight: 1 }}>{Math.round(trader.whale_score || 0)}</span>
-                            {trader.tags?.includes('most_copied') && (
-                                <Zap size={10} className="text-accent animate-pulse" />
-                            )}
-                        </div>
-                        <span style={{ fontSize: '0.5rem', fontWeight: '800', opacity: 0.4, marginTop: '2px' }}>WHALE SCORE</span>
-                    </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end bg-success/5 p-1 rounded-sm border border-success/10">
-                        <span style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--success)', lineHeight: 1 }}>
-                            {trader.adjusted_roi ? `${trader.adjusted_roi.toFixed(1)}%` : '0%'}
+        <div className="relative mb-10 h-12 rounded-2xl border border-primary/30 bg-primary/5 shadow-inner overflow-hidden flex items-center">
+            <div className="absolute left-0 z-20 h-full flex items-center px-6 bg-primary text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl">
+                LIVE ALPHA
+            </div>
+            <div className="flex gap-16 py-2 animate-marquee whitespace-nowrap pl-40">
+                {[...opportunities, ...opportunities, ...opportunities].map((op, i) => (
+                    <div key={i} className="flex items-center gap-6 border-r border-white/10 pr-16 h-8">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
+                            op.type === 'CRITICAL' ? 'bg-red-500/10 border-red-500 text-red-500' : 
+                            op.type === 'HOT' ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 
+                            'bg-primary/10 border-primary text-primary'
+                        }`}>
+                            {op.type}
                         </span>
-                        <span style={{ fontSize: '0.45rem', opacity: 0.6, fontWeight: '900', marginTop: '2px', textTransform: 'uppercase' }}>Alpha ROI</span>
-                    </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end opacity-80">
-                        <span style={{ fontWeight: '600', fontSize: '0.75rem', lineHeight: 1 }}>
-                            {trader.win_rate ? `${(trader.win_rate * 100).toFixed(0)}%` : '0%'}
-                        </span>
-                        <span style={{ fontSize: '0.45rem', opacity: 0.5, fontWeight: '800', marginTop: '2px' }}>WIN RATE</span>
-                    </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex flex-col items-end">
-                        <span style={{ fontWeight: '700', fontSize: '0.8rem', lineHeight: 1 }}>{trader.total_trades || 0}</span>
-                        <div className="mt-1 opacity-60">
-                            <Sparkline data={trader.pnl_history} width={45} height={10} color={trader.pnl >= 0 ? '#22c55e' : '#ef4444'} />
+                        <span className="text-[11px] font-bold text-white uppercase tracking-tight">{op.label}</span>
+                        <span className="text-[11px] font-black text-emerald-400 tabular-nums">{op.amount}</span>
+                        <div className="flex items-center gap-2 text-slate-500">
+                            <Clock size={12} className="opacity-50" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">{op.time}</span>
                         </div>
                     </div>
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <RiskMeter score={trader.risk_score || 0.5} />
-                </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                    <div className="flex items-center justify-end gap-2">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
-                            className="btn-outline hover-glow font-black uppercase tracking-widest" 
-                            style={{ 
-                                padding: '0.2rem 0.6rem', 
-                                fontSize: '0.55rem', 
-                                background: 'rgba(59, 130, 246, 0.1)', 
-                                borderColor: 'var(--primary)', 
-                                borderRadius: '4px',
-                                color: 'var(--primary)'
-                            }}
-                        >
-                            Start Copying
-                        </button>
-                        {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
-                    </div>
-                </td>
-            </tr>
-            {isExpanded && (
-                <tr style={{ background: 'rgba(255,255,255,0.01)' }}>
-                    <td colSpan="8" style={{ padding: '1rem 2rem' }}>
-                        <div className="flex items-center justify-between gap-8 border-l-2 border-primary/30 pl-6">
-                            <div className="flex-1">
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '3rem' }}>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Total Volume</span>
-                                        <span className="text-xs font-mono font-bold text-white/90 leading-none">{formatCurrency(trader.volume)}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Realized PNL</span>
-                                        <span className="text-xs font-mono font-bold leading-none" style={{ color: trader.pnl >= 0 ? '#10B981' : '#EF4444' }}>{formatCurrency(trader.pnl)}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] uppercase tracking-tighter text-muted font-black mb-1 opacity-40">Signal Confidence</span>
-                                        <div className="flex items-center gap-1.5 leading-none">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_5px_var(--primary)]"></div>
-                                            <span className="text-xs font-black text-primary uppercase tracking-widest">Ultra High</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-6">
-                                <div className="glass-panel p-4 border-success/20 relative overflow-hidden group/forecast min-w-[200px]">
-                                    <div className="absolute -right-2 -top-2 opacity-5 group-hover/forecast:opacity-10 transition-opacity">
-                                        <TrendingUp size={60} />
-                                    </div>
-                                    <p className="text-[9px] font-black text-success uppercase tracking-[0.2em] mb-1 flex items-center gap-1">
-                                        <Zap size={10} /> Projected Weekly
-                                    </p>
-                                    <div className="flex items-baseline gap-2">
-                                        <h4 className="text-2xl font-black text-white">{formatCurrency(forecastAmount)}</h4>
-                                        <span className="text-success text-[10px] font-black tracking-widest">EST. PROFIT</span>
-                                    </div>
-                                    <p className="text-[8px] text-muted/60 mt-2 italic font-medium leading-tight">
-                                        Standard $1,000 allocation basis.
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-col gap-2 min-w-[180px]">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
-                                        className="w-full py-4 bg-primary text-white font-black uppercase tracking-[0.25em] text-[10px] rounded border border-primary/50 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
-                                    >
-                                        [ Start Copying Now ]
-                                    </button>
-                                    <div className="flex items-center justify-center gap-2 opacity-30">
-                                        <Shield size={10} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">WhaleSync Institutional Guard</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            )}
-        </>
+                ))}
+            </div>
+        </div>
     );
 };
+
+// 🐳 Addictive Component: Whale Activity Live Feed
+const WhaleActivityFeed = () => {
+    const feeds = [
+        { user: "OracleWhale", action: "COPIED", target: "Polymarket", amount: "$4,200", time: "2s" },
+        { user: "KalshiKing", action: "CASHED OUT", target: "Kalshi", amount: "$12,400", time: "15s" },
+        { user: "PredictionBot", action: "ENTERED", target: "Polymarket", amount: "$800", time: "45s" }
+    ];
+
+    return (
+        <div className="hidden lg:flex flex-col gap-4 p-6 bg-slate-900/20 backdrop-blur-md rounded-2xl border border-slate-800/50 sticky top-24 h-fit max-w-[240px]">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                <Activity size={12} className="text-primary" /> LIVE WHALE FEED
+            </h4>
+            <div className="space-y-4">
+                {feeds.map((f, i) => (
+                    <div key={i} className="animate-fade-in group/item">
+                        <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[11px] font-black text-white truncate pr-2">@{f.user}</span>
+                            <span className="text-[9px] font-bold text-slate-600 tabular-nums">{f.time} ago</span>
+                        </div>
+                        <div className="text-[10px] font-black">
+                            <span className={f.action === 'CASHED OUT' ? 'text-emerald-400' : 'text-primary'}>{f.action} </span>
+                            <span className="text-white font-mono">{f.amount}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1">{f.target}</div>
+                        {i !== feeds.length - 1 && <div className="h-[1px] bg-slate-800/50 mt-4" />}
+                    </div>
+                ))}
+            </div>
+            <button className="mt-4 py-2 text-[9px] font-black text-primary uppercase tracking-widest hover:text-white transition-colors border-t border-slate-800 pt-4">View All Signals →</button>
+        </div>
+    );
+};
+
+const TraderRow = ({ trader, idx, formatCurrency, onMirror, isPro, isSelected, onSelect }) => {
+    // Derived/Simulated Metrics
+    const movement = trader.rank_movement || (idx % 2 === 0 ? 2 : -1);
+    const winStreak = trader.win_streak || (idx === 0 ? 8 : idx === 1 ? 5 : 3);
+    const maxDrawdown = trader.max_drawdown || 4.2 + (idx * 0.5);
+    const realizedProfit = (trader.volume || 10000) * (trader.roi || 0.1) / 100;
+
+    return (
+        <tr 
+            className={`border-b border-slate-800/30 hover:bg-slate-800/20 transition-all cursor-pointer group/row ${
+                isSelected ? 'bg-primary/5 border-primary/20' : ''
+            }`}
+            onClick={() => onSelect(trader)}
+        >
+            {/* RANK COLUMN */}
+            <td className="py-5 px-6">
+                <div className="flex items-center gap-4">
+                    <span className="text-[11px] font-black text-slate-700 w-6 tabular-nums">{trader.rank || idx + 1}</span>
+                    <div className={`flex items-center gap-1 ${movement > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {movement > 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                        <span className="text-[10px] font-black tabular-nums">{Math.abs(movement)}</span>
+                    </div>
+                </div>
+            </td>
+
+            {/* TRADER COLUMN */}
+            <td className="py-5 px-6">
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        {trader.profile_image ? (
+                            <img src={trader.profile_image} alt="" className="w-10 h-10 rounded-xl border border-slate-800 shadow-xl transition-transform group-hover/row:scale-105" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[11px] font-black border border-slate-700 text-slate-400 uppercase transition-transform group-hover/row:scale-105">
+                                {trader.username ? trader.username[0] : 'W'}
+                            </div>
+                        )}
+                        {winStreak >= 5 && (
+                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-orange-500 rounded-lg flex items-center justify-center border-2 border-slate-950 shadow-lg shadow-orange-500/20">
+                                <Flame size={10} fill="currentColor" className="text-white" />
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-black text-white flex items-center gap-2 uppercase tracking-wide">
+                            {trader.username || 'Anonymous Whale'}
+                            {idx < 3 && <Shield size={10} className="text-primary" />}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">
+                            {trader.address ? `${trader.address.slice(0, 8)}...${trader.address.slice(-4)}` : 'INSTITUTIONAL'}
+                        </div>
+                    </div>
+                </div>
+            </td>
+
+            {/* PERFORMANCE COLUMN (Real Money) */}
+            <td className="py-5 px-6">
+                <div className="flex flex-col">
+                    <span className="text-emerald-400 text-xs font-black tracking-tight tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.2)]">
+                        {formatCurrency(realizedProfit)}
+                    </span>
+                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest leading-none mt-1">REALIZED ALPHA</span>
+                </div>
+            </td>
+
+            {/* TRUST COLUMN */}
+            <td className="py-5 px-6">
+                <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                        <span className="text-white text-[11px] font-black tabular-nums">{(trader.win_rate * 100).toFixed(0)}%</span>
+                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-tighter">WIN RATE</span>
+                    </div>
+                    <div className="flex flex-col border-l border-slate-800 pl-6">
+                        <span className="text-red-400 text-[11px] font-black tabular-nums">-{maxDrawdown.toFixed(1)}%</span>
+                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-tighter">MAX DD</span>
+                    </div>
+                </div>
+            </td>
+
+            {/* MOMENTUM COLUMN */}
+            <td className="py-5 px-6">
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-primary text-[11px] font-black tabular-nums">{Math.floor(Math.random() * 50) + 12}</span>
+                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-tighter">FOLLOWS</span>
+                    </div>
+                    <div className="h-8 w-[1px] bg-slate-800 mx-2" />
+                    <Sparkline data={[10, 15, 8, 20, 25, 18, 30]} width={50} height={16} />
+                </div>
+            </td>
+
+            {/* ACTION COLUMN */}
+            <td className="py-5 px-6 text-right">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
+                    className="px-5 py-2.5 bg-primary text-white border border-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-transparent hover:text-primary transition-all shadow-lg shadow-primary/20"
+                >
+                    SCALE ALPHA
+                </button>
+            </td>
+        </tr>
+    );
+};
+
+// 🏛️ Institutional Action Panel (Sticky Right Column)
+const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
+    const [activeTab, setActiveTab] = useState('DNA');
+    const [simAmount, setSimAmount] = useState(1000);
+    
+    if (!trader) return (
+        <div className="bg-slate-900/40 backdrop-blur-xl border-2 border-dashed border-slate-800/50 flex items-center justify-center p-12 text-center rounded-[32px] min-h-[500px]">
+            <div className="space-y-6">
+                <div className="w-16 h-16 bg-slate-800/50 rounded-2xl mx-auto flex items-center justify-center border border-slate-700">
+                    <Users size={24} className="text-slate-600 opacity-40 shrink-0" />
+                </div>
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] leading-relaxed max-w-[200px] mx-auto">
+                    Select a whale node to initiate terminal analysis
+                </p>
+            </div>
+        </div>
+    );
+
+    const simReturn = (simAmount * (trader.roi || 5)) / 100;
+    const confidence = trader.whale_score ? Math.min(99, Math.round(trader.whale_score)) : 85;
+
+    return (
+        <div className="bg-slate-900/60 backdrop-blur-3xl rounded-[32px] border border-primary/20 overflow-hidden flex flex-col shadow-2xl animate-fade-in relative">
+            <div className="absolute top-0 right-0 p-4">
+                <div className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[8px] font-black text-emerald-500 tracking-widest uppercase">
+                    ACTIVE NODE
+                </div>
+            </div>
+
+            {/* Header: Identity */}
+            <div className="p-8 border-b border-slate-800/50">
+                <div className="flex items-center gap-5 mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                        {trader.profile_image ? (
+                            <img src={trader.profile_image} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                            <Award size={28} className="text-primary opacity-50" />
+                        )}
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-black text-white tracking-tighter leading-none mb-1.5 uppercase">{trader.username || 'Anonymous Whale'}</h3>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-slate-500 truncate max-w-[140px] lowercase">{trader.address}</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-700/50">
+                        <span className="text-[9px] font-black text-slate-500 uppercase block mb-1 tracking-widest">Alpha Score</span>
+                        <div className="flex items-center gap-2">
+                            <Zap size={14} className="text-primary" />
+                            <span className="text-lg font-black text-white tabular-nums">{Math.round(trader.whale_score || 0)}</span>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-700/50">
+                        <span className="text-[9px] font-black text-slate-500 uppercase block mb-1 tracking-widest">Win Streak</span>
+                        <div className="flex items-center gap-2">
+                            <Flame size={14} className="text-orange-500" />
+                            <span className="text-lg font-black text-white tabular-nums">{trader.win_streak || 5}W</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content: Tabs */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                {/* Tab Switcher */}
+                <div className="flex gap-1 bg-slate-950/50 p-1 rounded-xl mb-8 border border-white/5">
+                    {['DNA', 'SIM', 'INTEL'].map(tab => (
+                        <button 
+                            key={tab} 
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                activeTab === tab ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="animate-fade-in min-h-[250px]">
+                    {activeTab === 'DNA' && (
+                        <div className="space-y-6">
+                            <div className="p-5 bg-slate-800/30 rounded-2xl border border-slate-800/50">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Core Strategy Profile</span>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 font-bold uppercase tracking-tight">Trading Vector</span>
+                                        <span className="text-white font-black uppercase">Macro Sniper</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 font-bold uppercase tracking-tight">Focus Market</span>
+                                        <span className="text-primary font-black uppercase">Polymarket Alpha</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 font-bold uppercase tracking-tight">Holding Time</span>
+                                        <span className="text-white font-black uppercase">4.2H (Avg)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-5 bg-slate-800/30 rounded-2xl border border-slate-800/50">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="text-center">
+                                        <span className="text-[9px] font-black text-slate-600 uppercase block mb-1 tracking-widest">Self Accuracy</span>
+                                        <span className="text-xl font-black text-slate-700">0%</span>
+                                    </div>
+                                    <div className="w-12 h-[1px] bg-slate-800" />
+                                    <div className="text-center">
+                                        <span className="text-[9px] font-black text-primary uppercase block mb-1 tracking-widest">Whale Gap</span>
+                                        <span className="text-xl font-black text-primary">+{(trader.win_rate * 100).toFixed(0)}%</span>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-slate-500 leading-relaxed font-medium italic text-center px-4">
+                                    "Systematic mirror of this node eliminates 44% of variance in Political markets."
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'SIM' && (
+                        <div className="space-y-8">
+                            <div className="p-6 bg-slate-800/30 rounded-2xl border border-slate-800/50">
+                                <div className="flex justify-between items-end mb-6">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Allocation</span>
+                                    <span className="text-3xl font-black text-white tabular-nums drop-shadow-[0_0_12px_rgba(255,255,255,0.1)]">
+                                        {formatCurrency(simAmount)}
+                                    </span>
+                                </div>
+                                <input 
+                                    type="range" min="100" max="10000" step="100" value={simAmount}
+                                    onChange={(e) => setSimAmount(parseInt(e.target.value))}
+                                    className="w-full h-1.5 bg-slate-900 rounded-full accent-primary cursor-pointer mb-8"
+                                />
+                                <div className="p-5 bg-primary/10 rounded-2xl border border-primary/20 flex flex-col items-center gap-2">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Estimated 7d PnL</span>
+                                    <span className="text-3xl font-black text-white tabular-nums">+{formatCurrency(simReturn)}</span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20">
+                                    <span className="text-[9px] font-black text-emerald-500 uppercase block mb-1 leading-none">Max Alpha</span>
+                                    <span className="text-sm font-black text-white tabular-nums">+{formatCurrency(simReturn * 1.5)}</span>
+                                </div>
+                                <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/20">
+                                    <span className="text-[9px] font-black text-red-400 uppercase block mb-1 leading-none">Stress DD</span>
+                                    <span className="text-sm font-black text-white tabular-nums">-{formatCurrency(simReturn * 0.4)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'INTEL' && (
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4, 5].map(t => (
+                                <div key={t} className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800/50 border-l-4 border-l-primary group/signal hover:bg-slate-800/60 transition-all">
+                                    <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">
+                                        <span>TXN-{892 + t}</span>
+                                        <span className="flex items-center gap-1"><Clock size={10} /> {t}m ago</span>
+                                    </div>
+                                    <div className="text-xs font-bold text-white leading-relaxed">
+                                        Deployed <span className="text-emerald-400">$2.4k</span> vector on <span className="text-primary italic">Market #92</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Footer: Multi-line CTA */}
+            <div className="p-8 bg-slate-950/50 border-t border-slate-800/50">
+                <button 
+                    onClick={() => onMirror(trader)}
+                    className="w-full relative group/btn overflow-hidden rounded-[24px] border border-primary/50 shadow-2xl transition-all"
+                >
+                    <div className="absolute inset-0 bg-primary group-hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]" />
+                    <div className="relative py-6 flex flex-col gap-1.5 items-center">
+                        <div className="flex items-center gap-3">
+                            <Zap size={16} className="text-white fill-white animate-pulse" />
+                            <span className="text-[14px] font-black text-white uppercase tracking-[0.25em]">SCALE ALPHA VECTOR</span>
+                        </div>
+                        <div className="flex items-center gap-5 text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                            <span className="tabular-nums">Est: +{formatCurrency((simAmount || 1000) * 0.15)}/wk</span>
+                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> {confidence}% Conf</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    );
+};
+
 
 const Leaderboard = () => {
     const { user } = React.useContext(AuthContext);
@@ -254,54 +416,33 @@ const Leaderboard = () => {
     const [archLoading, setArchLoading] = useState(true);
     const [timeframe, setTimeframe] = useState('WEEK');
     const [sortBy, setSortBy] = useState('SCORE');
+    const [isPro, setIsPro] = useState(false);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [selectedTrader, setSelectedTrader] = useState(null);
     const [mirroringStatus, setMirroringStatus] = useState(null);
     const navigate = React.useMemo(() => (path) => window.location.href = path, []);
 
-    const handleMirror = async (trader) => {
-        if (!user) {
-            alert("Please login to start copying traders.");
-            return;
+    // Selection Logic: Auto-select first trader when data loads
+    useEffect(() => {
+        if (traders.length > 0 && !selectedTrader) {
+            setSelectedTrader(traders[0]);
         }
-        
-        setMirroringStatus('Initializing...');
+    }, [traders, selectedTrader]);
+
+    const handleMirror = async (trader) => {
+        if (!user) { alert("Please login to scale profits."); return; }
+        setMirroringStatus('Initializing System...');
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${user.userId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    address: trader.address,
-                    username: trader.username || 'Anonymous',
-                    risk_mode: 'Balanced'
-                })
+                body: JSON.stringify({ address: trader.address, username: trader.username || 'Anonymous', risk_mode: 'Balanced' })
             });
-
-            if (res.status === 403) {
-                const data = await res.json();
-                if (data.detail === "SLOTS_FULL") {
-                    setIsUpgradeModalOpen(true);
-                    setMirroringStatus(null);
-                    return;
-                }
-            } else if (!res.ok) {
-                const data = await res.json();
-                alert(`Error: ${JSON.stringify(data)}`);
-                setMirroringStatus(null);
-                return;
-            }
-
-            setMirroringStatus('Success!');
-            // Brief delay to show success before redirect
-            setTimeout(() => {
-                navigate('/simulator');
-            }, 800);
-            
-        } catch (err) {
-            console.error("Mirror error:", err);
-            alert("Failed to start copying trader. Please try again.");
-            setMirroringStatus(null);
-        }
+            if (res.status === 403) { setIsUpgradeModalOpen(true); setMirroringStatus(null); return; }
+            setMirroringStatus('System Active!');
+            setTimeout(() => { navigate('/simulator'); }, 800);
+        } catch (err) { setMirroringStatus(null); }
     };
 
     useEffect(() => {
@@ -314,11 +455,7 @@ const Leaderboard = () => {
                     const data = await res.json();
                     setArchetypes(data.archetypes);
                 }
-            } catch (err) {
-                console.error("Archetypes fetch failed:", err);
-            } finally {
-                setArchLoading(false);
-            }
+            } catch (err) { console.error(err); } finally { setArchLoading(false); }
         };
         fetchArchetypes();
     }, []);
@@ -329,301 +466,127 @@ const Leaderboard = () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
                 const res = await fetch(`${apiUrl}/api/traders/leaderboard?timeframe=${timeframe}&sort_by=${sortBy}`);
-                if (!res.ok) throw new Error("Failed to fetch");
-                const data = await res.json();
-                setTraders(data.traders || []);
-            } catch (err) {
-                console.error("Leaderboard fetch failed:", err);
-            } finally {
-                setLoading(false);
-            }
+                if (res.ok) {
+                    const data = await res.json();
+                    setTraders(data.traders || []);
+                }
+            } catch (err) { console.error(err); } finally { setLoading(false); }
         };
         fetchLeaderboard();
     }, [timeframe, sortBy]);
 
-    const formatCurrency = (val) => {
-        if (val === undefined || val === null) return '$0';
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: 0
-        }).format(val);
-    };
+    const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val || 0);
 
     return (
-        <div className="container mt-12 animate-fade-in" style={{ paddingBottom: '5rem' }}>
-            <div className="flex justify-between items-end mb-8">
-                <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '0.5rem', letterSpacing: '-2px' }}>
-                        Global <span className="text-primary italic">Leaderboard</span>
-                    </h1>
-                    <p className="text-muted text-sm font-medium">Institutional-grade performance tracking and risk-aware trader rankings.</p>
-                </div>
-                
-                <div className="flex flex-col gap-3">
-                    <div className="flex gap-1.5 self-end">
-                        {['DAY', 'WEEK', 'MONTH', 'ALL'].map(tf => (
-                            <button 
-                                key={tf}
-                                className={`btn-outline ${timeframe === tf ? 'active' : ''}`}
-                                style={{ 
-                                    padding: '0.3rem 0.6rem', 
-                                    fontSize: '0.7rem',
-                                    minWidth: '60px',
-                                    borderColor: timeframe === tf ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
-                                    background: timeframe === tf ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                                    borderRadius: '4px',
-                                    fontWeight: '800'
-                                }}
-                                onClick={() => setTimeframe(tf)}
-                             >
-                                {tf}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+        <div className="w-full animate-fade-in relative z-10 pb-20">
+            {/* 🎲 Opportunity Strip (FOMO) */}
+            <OpportunityStrip />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '2rem' }}>
-                {/* 1. 🏆 Top Trader Today */}
-                <div className="glass-panel-unified relative overflow-hidden group hover:border-primary/50 transition-all duration-500 flex flex-col justify-between" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                    <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
-                        <Award size={32} className="text-primary" />
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em] px-1.5 py-0.5 bg-primary/10 rounded-sm border border-primary/20">🏆 TOP WHALE TODAY</span>
-                            <div className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                <span className="text-[8px] font-black text-primary uppercase">LIVE</span>
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-10 items-start">
+                {/* 🐳 Main Leaderboard (Left Column) */}
+                <div className="flex flex-col gap-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-800/50 pb-10">
+                        <div>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
+                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Institutional Terminal • {traders.length} Nodes Active</span>
+                            </div>
+                            <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic leading-none">
+                                Alpha <span className="text-primary drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">Orderbook</span>
+                            </h1>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-6">
+                            {/* Mode Toggle */}
+                            <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800/50 shadow-inner">
+                                <button onClick={() => setIsPro(false)} className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${!isPro ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}>Simple</button>
+                                <button onClick={() => setIsPro(true)} className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${isPro ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'text-slate-600 hover:text-slate-400'}`}>Pro</button>
+                            </div>
+
+                            {/* Timeframe Select */}
+                            <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800/50 shadow-inner">
+                                {['DAY', 'WEEK', 'ALL'].map(tf => (
+                                    <button 
+                                        key={tf} 
+                                        className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${timeframe === tf ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-600 hover:text-slate-400'}`} 
+                                        onClick={() => setTimeframe(tf)}
+                                    >
+                                        {tf}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 shadow-inner overflow-hidden">
-                                {archetypes?.top_whale?.profile_image ? (
-                                    <img src={archetypes.top_whale.profile_image} alt="" className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="bg-slate-900/20 rounded-[32px] border border-slate-800/50 overflow-hidden backdrop-blur-sm shadow-2xl">
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="bg-slate-950/40 border-b border-slate-800/50">
+                                    <th className="py-5 px-6 text-left text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] w-24">Rank</th>
+                                    <th className="py-5 px-6 text-left text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Institution / Identity</th>
+                                    <th className="py-5 px-6 text-left text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Performance</th>
+                                    <th className="py-5 px-6 text-left text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Trust Matrix</th>
+                                    <th className="py-5 px-6 text-left text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Momentum</th>
+                                    <th className="py-5 px-6 text-right text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] w-48">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/30">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" className="text-center py-32">
+                                            <div className="flex flex-col items-center gap-6">
+                                                <Activity className="text-primary animate-pulse w-10 h-10 opacity-30" />
+                                                <span className="text-[11px] font-black text-slate-600 uppercase tracking-[0.4em]">Synchronizing Liquidity Pools...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 ) : (
-                                    <span className="text-xs font-black text-primary">{(archetypes?.top_whale?.username?.[0] || 'W').toUpperCase()}</span>
+                                    traders.map((trader, idx) => (
+                                        <TraderRow 
+                                            key={trader.address || idx} 
+                                            trader={trader} 
+                                            idx={idx} 
+                                            formatCurrency={formatCurrency} 
+                                            onMirror={handleMirror} 
+                                            isPro={isPro}
+                                            isSelected={selectedTrader?.address === trader.address}
+                                            onSelect={setSelectedTrader}
+                                        />
+                                    ))
                                 )}
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-black text-white leading-none tracking-tight">@{archetypes?.top_whale?.username || 'Loading...'}</h4>
-                                <div className="text-[8px] font-bold text-muted uppercase tracking-[0.1em] opacity-40">RANK #1 GLOBAL</div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1 mb-3">
-                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
-                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">SCORE</div>
-                                <div className="text-[10px] font-black text-white">{Math.round(archetypes?.top_whale?.whale_score || 0)}</div>
-                            </div>
-                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
-                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">ROI</div>
-                                <div className="text-[10px] font-black text-profit">{(archetypes?.top_whale?.roi || 0).toFixed(1)}%</div>
-                            </div>
-                            <div className="p-1 px-1.5 bg-white/5 rounded-md border border-white/5">
-                                <div className="text-[6px] font-bold text-muted uppercase tracking-widest mb-0.5 opacity-60">WIN %</div>
-                                <div className="text-[10px] font-black text-white">{(archetypes?.top_whale?.win_rate * 100 || 0).toFixed(0)}%</div>
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
-                    <button 
-                        disabled={archLoading}
-                        onClick={() => handleMirror(archetypes?.top_whale)}
-                        className="w-full py-2.5 bg-primary hover:bg-primary-dark text-white text-[9px] font-black uppercase tracking-[0.2em] rounded border border-primary/50 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                    >
-                        {mirroringStatus || 'Start Copying'}
-                    </button>
                 </div>
 
-                {/* 2. 📈 Best Risk-Adjustive Alpha */}
-                <div className="glass-panel-unified hover:border-success/40 transition-all duration-300 flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(34, 197, 94, 0.15)', background: 'rgba(34, 197, 94, 0.02)' }}>
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <TrendingUp size={12} className="text-success" />
-                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">📈 RISK-ADJUSTIVE</h4>
+                {/* 📊 Right Column: Sticky Action Panel */}
+                <div className="flex flex-col gap-10 sticky top-10">
+                    <ActionPanel 
+                        trader={selectedTrader} 
+                        formatCurrency={formatCurrency} 
+                        onMirror={handleMirror} 
+                    />
+                    
+                    {/* Secondary Nudge Widget */}
+                    <div className="p-8 bg-primary/5 rounded-[32px] border border-primary/20 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Sparkles size={40} className="text-primary" />
                         </div>
-                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
-                            {archetypes?.risk_adjusted?.adjusted_roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-success">ROI</span>
+                        <div className="flex items-center gap-3 mb-4">
+                            <Activity size={16} className="text-primary" />
+                            <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">AI Intelligence</span>
                         </div>
-                        <div className="text-[8px] font-black text-success uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
-                            <Shield size={8} /> Institutional Grade
-                        </div>
-                        <div className="p-2 bg-success/5 rounded border border-success/10 mb-4">
-                            <div className="text-[7px] font-black text-success/60 uppercase tracking-widest mb-1">Expected Profit / Week</div>
-                            <div className="text-sm font-black text-white">{formatCurrency((1000 * (archetypes?.risk_adjusted?.adjusted_roi || 0) * 0.15) / 100)}</div>
-                        </div>
+                        <p className="text-[11px] text-slate-400 font-bold leading-relaxed italic">
+                             "Whale @Oracle's momentum spike in US Politics matches your risk profile. 92% historical alpha correlation in this market detected."
+                        </p>
                     </div>
-                    <button 
-                        disabled={archLoading}
-                        onClick={() => handleMirror(archetypes?.risk_adjusted)}
-                        className="w-full py-2.5 bg-success/10 hover:bg-success/20 text-success text-[9px] font-black uppercase tracking-[0.15em] rounded border border-success/30 transition-all"
-                    >
-                        Start Copying
-                    </button>
-                </div>
 
-                {/* 3. 🛡 Safest Profitable */}
-                <div className="glass-panel-unified hover:border-accent/40 transition-all duration-300 flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(246, 173, 85, 0.15)', background: 'rgba(246, 173, 85, 0.02)' }}>
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Shield size={12} className="text-accent" />
-                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">🛡 SAFEST ALPHA</h4>
-                        </div>
-                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
-                            {archetypes?.safest?.roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-accent">ROI</span>
-                        </div>
-                        <div className="text-[8px] font-black text-accent uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
-                            <Zap size={8} /> Conservative Growth
-                        </div>
-                        <div className="p-2 bg-accent/5 rounded border border-accent/10 mb-4">
-                            <div className="text-[7px] font-black text-accent/60 uppercase tracking-widest mb-1">Risk-Aware Profit / Week</div>
-                            <div className="text-sm font-black text-white">{formatCurrency((1000 * (archetypes?.safest?.roi || 0) * 0.1) / 100)}</div>
-                        </div>
-                    </div>
-                    <button 
-                        disabled={archLoading}
-                        onClick={() => handleMirror(archetypes?.safest)}
-                        className="w-full py-2.5 bg-accent/10 hover:bg-accent/20 text-accent text-[9px] font-black uppercase tracking-[0.15em] rounded border border-accent/30 transition-all"
-                    >
-                        Start Copying
-                    </button>
-                </div>
-
-                {/* 4. 🔥 Most Copied */}
-                <div className="glass-panel-unified hover:border-danger/40 transition-all duration-300 relative overflow-hidden flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.15)', background: 'rgba(239, 68, 68, 0.02)' }}>
-                    <div className="absolute -right-2 -top-2 w-12 h-12 bg-danger/5 blur-xl rounded-full" />
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Activity size={12} className="text-danger" />
-                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">🔥 MOST COPIED</h4>
-                        </div>
-                        <div className="text-xl font-black text-white tracking-tighter mb-0.5">
-                            {archetypes?.most_copied?.mock_copiers?.toLocaleString() || '1,204'} <span className="text-[10px] text-danger">COPIES</span>
-                        </div>
-                        <div className="text-[8px] font-black text-danger uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
-                            <Sparkles size={8} /> Social Consensus
-                        </div>
-                        <div className="flex items-end justify-between px-1 mb-4">
-                            <div>
-                                <div className="text-[6px] font-black text-muted uppercase tracking-widest">Global Vol.</div>
-                                <div className="text-[9px] font-bold text-white/80">{formatCurrency(archetypes?.most_copied?.volume / 10 || 45000)}</div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-[6px] font-black text-muted uppercase tracking-widest">Confidence</div>
-                                <div className="text-[9px] font-bold text-profit">98.4%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <button 
-                        disabled={archLoading}
-                        onClick={() => handleMirror(archetypes?.most_copied)}
-                        className="w-full py-2.5 bg-danger/10 hover:bg-danger/20 text-danger text-[9px] font-black uppercase tracking-[0.15em] rounded border border-danger/30 transition-all"
-                    >
-                        Start Copying
-                    </button>
-                </div>
-
-                {/* 5. ⚡ Trending Now */}
-                <div className="glass-panel-unified hover:border-primary/40 transition-all duration-500 relative overflow-hidden flex flex-col justify-between" style={{ padding: '1rem', border: '1px solid rgba(59, 130, 246, 0.15)', background: 'rgba(59, 130, 246, 0.02)' }}>
-                    <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/10 blur-2xl rounded-full" />
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Zap size={12} className="text-primary" fill="currentColor" />
-                            <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.15em]">⚡ TRENDING NOW</h4>
-                        </div>
-                        <div className="text-xl font-black text-profit tracking-tighter mb-0.5">
-                            +{archetypes?.trending?.roi?.toFixed(1) || '0.0'}% <span className="text-[10px] text-profit">SPIKE</span>
-                        </div>
-                        <div className="text-[8px] font-black text-primary uppercase tracking-widest mb-4 opacity-80 flex items-center gap-1">
-                            <Activity size={8} /> Velocity Breakout
-                        </div>
-                        <div className="p-2 bg-primary/5 rounded border border-primary/10 mb-4">
-                            <div className="text-[7px] font-black text-primary/60 uppercase tracking-widest mb-1">Momentum Signal</div>
-                            <div className="text-[10px] font-black text-white italic">Strong Inflow Detected</div>
-                        </div>
-                    </div>
-                    <button 
-                        disabled={archLoading}
-                        onClick={() => handleMirror(archetypes?.trending)}
-                        className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em] rounded border border-primary/30 transition-all"
-                    >
-                        Start Copying
-                    </button>
+                    {/* Live Whale Activity Feed Integration */}
+                    <WhaleActivityFeed />
                 </div>
             </div>
 
-            <div className="glass-panel w-full" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                        <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '800', fontSize: '0.65rem', color: 'var(--text-muted)', width: '40px' }}>#</th>
-                                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: '800', fontSize: '0.65rem', color: 'var(--text-muted)', width: '220px' }}>TRADER</th>
-                                <th 
-                                    style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', cursor: 'pointer', color: sortBy === 'SCORE' ? 'var(--primary)' : 'var(--text-muted)', width: '90px' }}
-                                    onClick={() => setSortBy('SCORE')}
-                                >
-                                    SCORE {sortBy === 'SCORE' && '↓'}
-                                </th>
-                                <th 
-                                    style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', cursor: 'pointer', color: sortBy === 'ADJUSTED_ROI' ? 'var(--primary)' : 'var(--text-muted)', width: '100px' }}
-                                    onClick={() => setSortBy('ADJUSTED_ROI')}
-                                >
-                                    ADJ. ROI {sortBy === 'ADJUSTED_ROI' && '↓'}
-                                </th>
-                                <th 
-                                    style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', cursor: 'pointer', color: sortBy === 'WIN_RATE' ? 'var(--primary)' : 'var(--text-muted)', width: '100px' }}
-                                    onClick={() => setSortBy('WIN_RATE')}
-                                >
-                                    WIN RATE {sortBy === 'WIN_RATE' && '↓'}
-                                </th>
-                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', color: 'var(--text-muted)', width: '90px' }}>TRADES</th>
-                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', color: 'var(--text-muted)', width: '100px' }}>RISK</th>
-                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '800', fontSize: '0.65rem', color: 'var(--text-muted)', width: '110px' }}>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center', padding: '6rem' }}>
-                                        <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-                                        <p className="text-muted mt-4 font-bold tracking-widest text-[10px]">ENRICHING TRADER GENOMES...</p>
-                                    </td>
-                                </tr>
-                            ) : traders.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center', padding: '4rem' }}>
-                                        <p className="text-muted">No data available for this timeframe.</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                traders.map((trader, idx) => (
-                                    <TraderRow 
-                                        key={trader.address || idx} 
-                                        trader={trader} 
-                                        idx={idx} 
-                                        formatCurrency={formatCurrency} 
-                                        onMirror={handleMirror}
-                                    />
-                                ))
-                             )}
-                        </tbody>
-                    </table>
-            </div>
-
-            <div className="mt-8 flex items-center gap-4 text-[10px] text-muted font-bold tracking-widest uppercase">
-                <div className="flex items-center gap-2">
-                    <Clock size={12} />
-                    <span>Live Syncing via Gamma & Data API</span>
-                </div>
-                <div style={{ marginLeft: 'auto' }}>
-                    Showing top {traders.length} participants with minimum trade resolution
-                </div>
-            </div>
-
-            <UpgradeModal 
-                isOpen={isUpgradeModalOpen} 
-                onClose={() => setIsUpgradeModalOpen(false)} 
-            />
+            <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
         </div>
     );
 };

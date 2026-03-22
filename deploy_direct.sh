@@ -388,8 +388,8 @@ if [ -z "$DIST_ID" ] || [ "$DIST_ID" == "None" ]; then
           "QueryString": true,
           "Cookies": { "Forward": "all" },
           "Headers": { 
-            "Quantity": 3, 
-            "Items": ["Authorization", "Origin", "Content-Type"] 
+             "Quantity": 8,
+             "Items": ["Authorization", "Origin", "Content-Type", "Sec-WebSocket-Key", "Sec-WebSocket-Version", "Sec-WebSocket-Protocol", "Sec-WebSocket-Extensions", "Sec-WebSocket-Accept"]
           }
         },
         "TrustedSigners": { "Enabled": false, "Quantity": 0 },
@@ -433,8 +433,8 @@ else
         }
       } |
       .ForwardedValues.Headers = {
-        \"Quantity\": 3,
-        \"Items\": [\"Authorization\", \"Origin\", \"Content-Type\"]
+        \"Quantity\": 8,
+        \"Items\": [\"Authorization\", \"Origin\", \"Content-Type\", \"Sec-WebSocket-Key\", \"Sec-WebSocket-Version\", \"Sec-WebSocket-Protocol\", \"Sec-WebSocket-Extensions\", \"Sec-WebSocket-Accept\"]
       }
     ) | .DistributionConfig.Origins.Items[0].DomainName = \"$S3_DOMAIN\" | .DistributionConfig" cf-config.json > cf-config-update.json
 

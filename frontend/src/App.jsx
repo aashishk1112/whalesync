@@ -39,39 +39,38 @@ const Layout = ({ children }) => {
   const { user, logout } = React.useContext(AuthContext);
   return (
     <>
-      <header className="app-header">
-        <div className="container flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to={user ? "/" : "/login"} style={{ textDecoration: 'none' }}>
-              <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--primary)', cursor: 'pointer' }}>WhaleSync</h1>
+      <header className="app-header border-b border-white/10 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 py-4">
+        <div className="app-container flex justify-between items-center">
+          <div className="flex items-center gap-6">
+            <Link to={user ? "/" : "/login"} className="no-underline">
+              <h1 className="m-0 text-xl font-black text-primary hover:text-primary-hover transition-colors tracking-tighter">WhaleSync</h1>
             </Link>
             {user && (
-              <nav className="nav-links">
-                <Link to="/">Dashboard</Link>
-                <Link to="/traders">Leaderboard</Link>
-                <Link to="/performance">Performance</Link>
-                <Link to="/simulator">Simulator</Link>
-                <Link to="/subscription">Subscription</Link>
-                <Link to="/settings">Settings</Link>
+              <nav className="flex items-center gap-6">
+                <Link to="/" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
+                <Link to="/traders" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
+                <Link to="/performance" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Performance</Link>
+                <Link to="/simulator" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Simulator</Link>
+                <Link to="/subscription" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Subscription</Link>
+                <Link to="/settings" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Settings</Link>
               </nav>
             )}
           </div>
           <div>
             {user && (
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {user.picture_url && (
                     <img
                       src={user.picture_url}
                       alt=""
-                      style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)' }}
+                      className="w-8 h-8 rounded-full border border-white/10"
                     />
                   )}
-                  <span className="font-medium" style={{ color: 'white', whiteSpace: 'nowrap' }}>{user.username}</span>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest">{user.username}</span>
                 </div>
                 <button
-                  className="btn-outline"
-                  style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/10 transition-all"
                   onClick={() => { if (window.confirm('Are you sure you want to log out?')) logout(); }}
                 >
                   Logout
@@ -81,7 +80,7 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </header>
-      <main>
+      <main className="app-container pb-20">
         {children}
       </main>
       <Footer />

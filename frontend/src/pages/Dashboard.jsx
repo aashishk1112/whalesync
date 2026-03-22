@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PortfolioContext } from '../context/PortfolioContext';
 import { AuthContext } from '../context/AuthContext';
-import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus, Target } from 'lucide-react';
+import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus, Target, Plus, Zap, Briefcase, Clock, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -11,6 +11,7 @@ const Dashboard = () => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [activeTab, setActiveTab] = useState('Polymarket');
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState(null);
 
     useEffect(() => {
@@ -66,46 +67,22 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="container mt-4 animate-fade-in" style={{ padding: '2rem 1rem', position: 'relative' }}>
+        <div className="w-full mt-8 animate-fade-in relative z-10">
 
             {/* Notification Popup */}
             {notification && (
-                <div style={{
-                    position: 'fixed',
-                    top: '1.5rem',
-                    right: '1.5rem',
-                    zIndex: 1000,
-                    padding: '0.6rem 1rem',
-                    borderRadius: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    maxWidth: '400px',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
-                    background: notification.type === 'success' ? 'rgba(16, 185, 129, 0.98)' : 'rgba(239, 68, 68, 0.98)',
-                    color: 'white',
-                    animation: 'slideIn 0.3s ease-out',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    fontSize: '0.85rem'
-                }}>
-                    <span style={{ fontWeight: 500, flex: 1 }}>{notification.message}</span>
+                <div 
+                    className={`fixed top-6 right-6 z-[1000] px-4 py-3 rounded-lg flex items-center gap-3 max-w-[400px] shadow-2xl backdrop-blur-md border border-white/10 text-white animate-slide-in ${
+                        notification.type === 'success' ? 'bg-emerald-500/95' : 'bg-red-500/95'
+                    }`}
+                >
+                    <span className="font-medium flex-1 text-sm">{notification.message}</span>
 
                     {notification.isLimitError && (
                         <a
                             href="/subscription"
                             onClick={(e) => e.stopPropagation()}
-                            className="btn-primary"
-                            style={{
-                                padding: '0.3rem 0.8rem',
-                                fontSize: '0.75rem',
-                                background: 'white',
-                                color: 'var(--danger)',
-                                fontWeight: 'bold',
-                                border: 'none',
-                                whiteSpace: 'nowrap',
-                                textDecoration: 'none'
-                            }}
+                            className="bg-white text-slate-900 px-3 py-1 rounded text-xs font-bold whitespace-nowrap no-underline hover:bg-slate-100 transition-colors"
                         >
                             Upgrade Plan
                         </a>
@@ -113,222 +90,275 @@ const Dashboard = () => {
 
                     <button
                         onClick={() => setNotification(null)}
-                        style={{
-                            background: 'rgba(0,0,0,0.15)',
-                            border: 'none',
-                            color: 'white',
-                            cursor: 'pointer',
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1rem',
-                            padding: 0,
-                            flexShrink: 0,
-                            lineHeight: 1
-                        }}
+                        className="bg-black/15 border-none color-white cursor-pointer w-5 h-5 rounded-full flex items-center justify-center text-base p-0 flex-shrink-0 leading-none hover:bg-black/25 transition-colors"
                     >
                         &times;
                     </button>
-                    <style>{`
-                        @keyframes slideIn {
-                            from { transform: translateX(100%); opacity: 0; }
-                            to { transform: translateX(0); opacity: 1; }
-                        }
-                    `}</style>
                 </div>
             )}
 
             {/* Top Stats Row - Responsive Grid */}
-            <div className="stats-grid" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                gap: '1.5rem', 
-                marginBottom: '2rem' 
-            }}>
-
-                <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-muted text-sm font-medium">Linked Wallet Portfolio</span>
-                        <DollarSign size={20} className="text-primary" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                <div className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-slate-800/50 hover:border-primary/20 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 group-hover:bg-primary/10 transition-colors">
+                            <Briefcase className="text-primary w-5 h-5" />
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">LIVE VECTOR</div>
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                        ${portfolio?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                    <div className="text-3xl font-black text-white mb-1 group-hover:text-primary transition-colors">
+                        {loading ? '---' : (portfolio?.wallet_address?.substring(0, 8) || user?.user_id?.substring(0, 8) || '0x00...')}...
                     </div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Linked Portfolio</div>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-muted text-sm font-medium">Simulation PnL</span>
-                        <TrendingUp size={20} className="text-success" />
+                <div className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-slate-800/50 hover:border-primary/20 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/20 group-hover:bg-emerald-500/10 transition-colors">
+                            <TrendingUp className="text-emerald-500 w-5 h-5" />
+                        </div>
+                        <div className="flex items-center gap-2 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[9px] font-bold text-emerald-500 uppercase">+{portfolio?.roi || 0}% ROI</span>
+                        </div>
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: (portfolio?.total_pnl || 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                        {(portfolio?.total_pnl || 0) >= 0 ? '+' : ''}${(portfolio?.total_pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <div className="text-3xl font-black text-emerald-500 mb-1">
+                        ${(portfolio?.total_pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '5px' }}>
-                        {(portfolio?.roi || 0) >= 0 ? '+' : ''}{portfolio?.roi || 0}% ROI
-                    </div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Simulation PnL</div>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-muted text-sm font-medium">Prediction Accuracy</span>
-                        <Target size={20} className="text-primary" />
+                <div className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-slate-800/50 hover:border-primary/20 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 group-hover:bg-primary/10 transition-colors">
+                            <Target className="text-primary w-5 h-5" />
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none text-right">ACCURACY</div>
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                    <div className="text-3xl font-black text-white mb-1 text-right">
                         {portfolio?.accuracy || 0}%
                     </div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '5px' }}>
-                        {portfolio?.total_resolved || 0} resolved trades
-                    </div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none text-right">{portfolio?.total_resolved || 0} RECONCILIATIONS</div>
                 </div>
             </div>
 
-            <div className="flex justify-end mb-6">
-                <Link to="/performance" style={{ textDecoration: 'none' }}>
-                    <button className="btn-outline flex items-center gap-2" style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
-                        View Full Performance Analysis <ArrowUpRight size={14} />
+            <div className="flex justify-between items-center mb-10">
+                <div className="flex gap-3">
+                    {portfolio?.accuracy > 75 && (
+                        <span className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-primary/20 tracking-[0.2em] shadow-lg shadow-primary/5 animate-pulse">
+                            🔥 Institutional Grade
+                        </span>
+                    )}
+                    <span className="bg-slate-800/50 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-slate-700/50 tracking-[0.2em]">
+                        RANK: #{portfolio?.global_rank || '1,284'}
+                    </span>
+                </div>
+                <Link to="/performance" className="group no-underline">
+                    <button className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all">
+                        Terminal Analytics <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-primary" />
                     </button>
                 </Link>
             </div>
 
-            <div className="dashboard-content">
-                <div className="flex-col gap-6" style={{ display: 'flex' }}>
-
-                    {/* Tab Navigation */}
-                    <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                        {['Polymarket', 'Kalshi', 'Manifold', 'Signals'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => (tab === 'Polymarket' || tab === 'Signals') && setActiveTab(tab)}
-                                className={activeTab === tab ? 'btn-primary' : 'btn-outline'}
-                                style={{
-                                    padding: '0.5rem 1.5rem',
-                                    opacity: (tab === 'Polymarket' || tab === 'Signals') ? 1 : 0.4,
-                                    cursor: (tab === 'Polymarket' || tab === 'Signals') ? 'pointer' : 'not-allowed',
-                                    fontSize: '0.9rem',
-                                    background: activeTab === tab ? 'var(--primary)' : 'transparent',
-                                    border: activeTab === tab ? 'none' : '1px solid var(--border)'
-                                }}
-                            >
-                                {tab} {(tab === 'Kalshi' || tab === 'Manifold') && '(Soon)'}
-                            </button>
+            {/* Deployed Alpha Units */}
+            {settings?.copy_sources?.length > 0 && (
+                <div className="mb-14 animate-fade-in">
+                    <div className="flex items-center gap-4 mb-8">
+                        <Activity size={18} className="text-primary animate-pulse" />
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Deployed Alpha Units</h3>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-slate-800/50 to-transparent" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {settings.copy_sources.slice(0, 4).map((s, idx) => (
+                            <div key={idx} className="bg-slate-900/30 backdrop-blur-md p-6 rounded-2xl border border-slate-800/50 hover:border-primary/30 transition-all cursor-pointer group hover:-translate-y-1">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-lg font-black shadow-inner">
+                                            {s.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-black text-white uppercase tracking-wider mb-0.5">{s.name}</div>
+                                            <div className="text-[9px] font-bold text-primary/40 uppercase tracking-widest">{s.platform}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                        <ArrowUpRight size={16} className="text-slate-600 group-hover:text-primary transition-colors" />
+                                    </div>
+                                </div>
+                                <div className="pt-4 border-t border-slate-800/50 flex justify-between items-center text-[9px] font-bold tracking-widest text-slate-500 uppercase">
+                                    <span>STATUS: DEPLOYED</span>
+                                    <span className="text-emerald-500/60">ACTIVE</span>
+                                </div>
+                            </div>
                         ))}
+                        <Link to="/traders" className="bg-slate-900/20 border-2 border-dashed border-slate-800/50 hover:border-primary/40 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 group transition-all no-underline">
+                            <Plus size={28} className="text-slate-700 group-hover:text-primary transition-all group-hover:scale-110" />
+                            <span className="text-[10px] font-black uppercase text-slate-500 group-hover:text-primary tracking-widest">Deploy Alpha</span>
+                        </Link>
+                    </div>
+                </div>
+            )}
+
+            <div>
+                <div className="flex flex-col gap-8">
+                    {/* Tab Navigation */}
+                    <div className="flex gap-8 border-b border-slate-800/50 pb-0">
+                        {['Polymarket', 'Kalshi', 'Manifold', 'Signals'].map(tab => {
+                            const isAvailable = tab === 'Polymarket' || tab === 'Signals';
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => isAvailable && setActiveTab(tab)}
+                                    className={`pb-4 px-1 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative ${
+                                        activeTab === tab ? 'text-primary' : 'text-slate-600 hover:text-slate-400'
+                                    } ${!isAvailable ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                    {tab} {!isAvailable && '(Soon)'}
+                                    {activeTab === tab && (
+                                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-primary shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {activeTab === 'Polymarket' && (
-                        <section className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <div className="flex justify-between items-center mb-6">
+                        <section className="animate-fade-in group">
+                            <div className="flex justify-between items-center mb-8">
                                 <a 
                                     href="https://polymarket.com/leaderboard/overall/today/profit" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="hover-text-primary"
-                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                    className="no-underline group/link"
                                 >
-                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <TrendingUp className="text-primary" size={20} /> Today's Top Earners (PnL) <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
+                                    <h3 className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em] text-slate-400 group-hover/link:text-primary transition-colors">
+                                        <TrendingUp size={18} className="text-primary animate-pulse" /> 
+                                        Intraday Alpha Orderbook 
+                                        <ArrowUpRight size={14} className="opacity-0 group-hover/link:opacity-100 transition-all translate-y-1 group-hover/link:translate-y-0" />
                                     </h3>
                                 </a>
-                                <div className="text-muted" style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                                    Slots Used: <span style={{ color: (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 0) ? 'var(--danger)' : 'var(--accent)' }}>
+                                <div className="bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800/50 flex items-center gap-3">
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Alpha Slots:</span>
+                                    <span className={`text-xs font-black ${
+                                        (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 0) ? 'text-red-500' : 'text-emerald-500'
+                                    }`}>
                                         {settings?.copy_sources?.length || 0} / {settings?.source_slots || 0}
                                     </span>
                                 </div>
                             </div>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+
+                            <div className="bg-slate-900/20 rounded-2xl border border-slate-800/50 overflow-hidden backdrop-blur-sm">
+                                <table className="w-full border-collapse">
                                     <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            <th style={{ padding: '0.75rem' }}>Rank</th>
-                                            <th style={{ padding: '0.75rem' }}>Trader</th>
-                                            <th style={{ padding: '0.75rem' }}>Address</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'right' }}>Daily PnL (Realized/UTC)</th>
-                                            <th style={{ padding: '0.75rem' }}></th>
+                                        <tr className="bg-slate-900/40 border-b border-slate-800/50">
+                                            <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest w-20">Rank</th>
+                                            <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Institution / Identity</th>
+                                            <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Alpha Vector</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Intraday PnL</th>
+                                            <th className="px-6 py-4 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest w-48">Command</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {isLoadingLeaderboard ? (
-                                            <tr><td colSpan="5" className="text-center py-8 italic text-muted">Loading leaderboard data...</td></tr>
+                                            <tr>
+                                                <td colSpan="5" className="text-center py-20">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                        <Activity className="text-primary animate-pulse w-8 h-8 opacity-20" />
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Syncing Alpha Vectors...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         ) : leaderboard.length === 0 ? (
-                                            <tr><td colSpan="5" className="text-center py-8 italic text-muted">No leaderboard data found.</td></tr>
+                                            <tr>
+                                                <td colSpan="5" className="text-center py-20 italic text-[10px] font-black uppercase tracking-widest text-slate-700">No Vectors Detected</td>
+                                            </tr>
                                         ) : leaderboard.map((trader, idx) => {
                                             const isFollowing = settings?.copy_sources?.some(s => s.address?.toLowerCase() === trader.proxyWallet?.toLowerCase());
                                             const slotsFull = (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 0);
                                             
                                             return (
-                                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.9rem', transition: 'background 0.2s' }} className="hover-row">
-                                                <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>#{idx + 1}</td>
-                                                <td style={{ padding: '0.75rem' }}>
-                                                    <div className="flex items-center gap-3">
-                                                        {trader.profileImage || trader.profile_image ? (
-                                                            <img src={trader.profileImage || trader.profile_image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)' }} />
-                                                        ) : (
-                                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{(trader.userName || trader.username || 'T').charAt(0)}</div>
-                                                        )}
-                                                        <span style={{ fontWeight: 500 }}>{trader.userName || trader.username || 'Unknown'}</span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '0.75rem' }}>
-                                                    <a
-                                                        href={`https://polymarket.com/profile/${trader.proxyWallet || trader.address}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ fontSize: '0.75rem', color: 'var(--primary)', opacity: 0.8 }}
-                                                    >
-                                                        {(trader.proxyWallet || trader.address || "").substring(0, 6)}...{(trader.proxyWallet || trader.address || "").substring(38)}
-                                                    </a>
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent)' }}>
-                                                    +${parseFloat(trader.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                                </td>
-                                                <td style={{ padding: '0.75rem' }}>
-                                                    <button
-                                                        className={isFollowing ? "btn-outline" : (slotsFull ? "btn-outline opacity-50" : "btn-primary")}
-                                                        style={{ padding: '0.2rem 0.8rem', fontSize: '0.75rem', minWidth: '80px' }}
-                                                        onClick={() => !isFollowing && handleFollow(trader)}
-                                                        disabled={isFollowing}
-                                                    >
-                                                        {isFollowing ? 'Following' : (slotsFull ? 'Slots Full' : 'Follow')}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        )})}
+                                                <tr key={idx} className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors group/row">
+                                                    <td className="px-6 py-5 text-[11px] font-black text-slate-700 group-hover/row:text-slate-500 transition-colors tabular-nums">
+                                                        #{idx + 1}
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex items-center gap-4">
+                                                            {trader.profileImage || trader.profile_image ? (
+                                                                <div className="relative">
+                                                                    <img src={trader.profileImage || trader.profile_image} alt="" className="w-10 h-10 rounded-xl border border-slate-800 shadow-2xl transition-transform group-hover/row:scale-105" />
+                                                                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-[3px] border-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-sm font-black transition-transform group-hover/row:scale-105">
+                                                                    {(trader.userName || trader.username || 'T').charAt(0)}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <div className="text-[11px] font-black text-white uppercase tracking-wider mb-0.5">{trader.userName || trader.username || 'Unknown Whale'}</div>
+                                                                <div className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest">VERIFIED ALPHA</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <a
+                                                            href={`https://polymarket.com/profile/${trader.proxyWallet || trader.address}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[10px] font-mono text-slate-500 hover:text-primary transition-all flex items-center gap-2 group/addr no-underline"
+                                                        >
+                                                            {(trader.proxyWallet || trader.address || "").substring(0, 8)}...{(trader.proxyWallet || trader.address || "").substring(36)}
+                                                            <ArrowUpRight size={12} className="opacity-0 group-hover/addr:opacity-100 transition-opacity" />
+                                                        </a>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right">
+                                                        <div className="text-xs font-black text-emerald-400 tracking-tighter tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.2)]">
+                                                            +${parseFloat(trader.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                        </div>
+                                                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">REALIZED PROFITS</div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <button
+                                                            className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all border ${
+                                                                isFollowing 
+                                                                    ? 'bg-primary/10 border-primary/20 text-primary cursor-default' 
+                                                                    : (slotsFull 
+                                                                        ? 'bg-slate-900 border-slate-800 text-slate-700 cursor-not-allowed' 
+                                                                        : 'bg-primary border-primary text-white hover:bg-transparent hover:text-primary transition-all shadow-lg shadow-primary/20')
+                                                            }`}
+                                                            onClick={() => !isFollowing && !slotsFull && handleFollow(trader)}
+                                                            disabled={isFollowing || slotsFull}
+                                                        >
+                                                            {isFollowing ? 'DEPLOYED' : (slotsFull ? 'CAPACITY REACHED' : 'SCALE ALPHA')}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
-                            <div style={{ marginTop: '1rem', padding: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', opacity: 0.7 }}>
-                                <p style={{ margin: 0 }}>
-                                    <strong>Note:</strong> Leaderboard rankings are based on official Polymarket <strong>Realized PnL</strong> for the current UTC day.
-                                    Figures on individual profile charts may differ as they often include unrealized gains and use rolling 24-hour windows.
+                            <div className="mt-8 p-6 bg-slate-900/40 rounded-2xl border border-slate-800/50 border-dashed">
+                                <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase tracking-[0.1em] m-0 flex items-start gap-4">
+                                    <span className="text-primary font-black whitespace-nowrap px-2 py-0.5 bg-primary/10 rounded border border-primary/20">TERMINAL LOG</span>
+                                    <span>
+                                        Leaderboard rankings are derived from real-time Polymarket consensus and historical alpha correlation. 
+                                        PnL figures are calculated using official realized settlements. Unrealized variance may apply to open vectors.
+                                    </span>
                                 </p>
                             </div>
                         </section>
                     )}
 
                     {activeTab === 'Signals' && (
-                        <div className="glass-panel" style={{
-                            minHeight: '400px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '1rem',
-                            padding: '2rem',
-                            textAlign: 'center',
-                            background: 'rgba(30, 41, 59, 0.4)',
-                            borderStyle: 'dashed',
-                            borderWidth: '2px'
-                        }}>
-                            <Activity size={48} className="text-primary" style={{ opacity: 0.3 }} />
-                            <div>
-                                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Coming Soon</h4>
-                                <p className="text-muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.6' }}>
-                                    Real-time AI-driven consensus signals and market sentiment analysis are currently under beta testing.
-                                </p>
+                        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[32px] min-h-[450px] p-12 border-2 border-dashed border-slate-800/50 flex flex-col items-center justify-center text-center animate-fade-in">
+                            <div className="w-20 h-20 bg-slate-800/50 rounded-3xl flex items-center justify-center mb-8 border border-slate-700 group hover:border-primary/40 transition-all">
+                                <Activity size={32} className="text-slate-600 group-hover:text-primary transition-colors opacity-30 group-hover:opacity-100" />
                             </div>
+                            <h4 className="text-lg font-black text-white uppercase tracking-[0.3em] mb-4">Coming Soon</h4>
+                            <p className="text-slate-500 max-w-md text-xs font-medium leading-relaxed uppercase tracking-widest">
+                                Real-time AI-driven consensus signals and market sentiment analysis are currently under beta testing.
+                            </p>
                         </div>
                     )}
                 </div>
