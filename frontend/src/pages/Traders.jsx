@@ -434,7 +434,7 @@ const Leaderboard = () => {
         setMirroringStatus('Initializing System...');
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${user.userId}`, {
+            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${user.user_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ address: trader.address, username: trader.username || 'Anonymous', risk_mode: 'Balanced' })
