@@ -22,6 +22,9 @@ SUBSCRIPTION_TIERS_TABLE = os.environ.get("SUBSCRIPTION_TIERS_TABLE") or f"{env}
 SYSTEM_TABLE = os.environ.get("SYSTEM_TABLE") or f"{env}-whalesync-system-config"
 REFERRAL_USAGE_TABLE = os.environ.get("REFERRAL_USAGE_TABLE") or f"{env}-whalesync-referral-usage"
 
+print(f"[DEBUG] USERS_TABLE: {USERS_TABLE}")
+print(f"[DEBUG] ENVIRONMENT: {env}")
+
 # Support local DynamoDB (LocalStack) via DYNAMODB_ENDPOINT env var
 _endpoint = os.environ.get("DYNAMODB_ENDPOINT")  # e.g. http://localhost:4566
 _kwargs = {

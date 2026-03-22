@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Award, TrendingUp, Target, Shield, Clock, ExternalLink, ChevronDown, ChevronUp, Zap, Activity, AlertCircle, Sparkles, TrendingDown, ArrowUpRight, ArrowDownRight, Info, Flame, History, DollarSign, Users, Eye, Play, BarChart3, Timer } from 'lucide-react';
 import Sparkline from '../components/Sparkline';
 import RiskMeter from '../components/RiskMeter';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { PortfolioContext } from '../context/PortfolioContext';
 
 function UpgradeModal({ isOpen, onClose }) {
     if (!isOpen) return null;
@@ -410,6 +412,8 @@ const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
 
 const Leaderboard = () => {
     const { user } = React.useContext(AuthContext);
+    const { refreshStrategies } = React.useContext(PortfolioContext);
+    const navigate = useNavigate();
     const [traders, setTraders] = useState([]);
     const [archetypes, setArchetypes] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -420,7 +424,6 @@ const Leaderboard = () => {
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
     const [mirroringStatus, setMirroringStatus] = useState(null);
-    const navigate = React.useMemo(() => (path) => window.location.href = path, []);
 
     // Selection Logic: Auto-select first trader when data loads
     useEffect(() => {
@@ -440,6 +443,10 @@ const Leaderboard = () => {
                 body: JSON.stringify({ address: trader.address, username: trader.username || 'Anonymous', risk_mode: 'Balanced' })
             });
             if (res.status === 403) { setIsUpgradeModalOpen(true); setMirroringStatus(null); return; }
+            
+            // Refresh strategies in context so Dashboard/Simulator are up to date
+            if (refreshStrategies) await refreshStrategies();
+            
             setMirroringStatus('System Active!');
             setTimeout(() => { navigate('/simulator'); }, 800);
         } catch (err) { setMirroringStatus(null); }

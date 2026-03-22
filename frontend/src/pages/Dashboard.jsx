@@ -5,7 +5,7 @@ import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlu
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-    const { portfolio, settings, addSource } = useContext(PortfolioContext);
+    const { portfolio, settings, strategies, addSource, refreshStrategies } = useContext(PortfolioContext);
     const { user } = useContext(AuthContext);
     const [signals, setSignals] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -284,37 +284,37 @@ const Dashboard = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Strategy Cards */}
-                    {settings?.copy_sources?.map((s, idx) => (
+                    {strategies?.map((s, idx) => (
                         <div key={idx} className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-[24px] border border-white/5 hover:border-cyan-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] duration-fast ease-emphasis group flex flex-col justify-between cursor-pointer">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black border border-primary/20 shadow-inner">
-                                        {s.name.charAt(0)}
+                                        {(s.name || '').charAt(0)}
                                     </div>
                                     <div>
                                         <div className="text-white font-black text-sm tracking-wide group-hover:text-primary transition-colors">{s.name}</div>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-status-pulse" />
-                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">ACTIVE</span>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${(s.status || 'inactive') === 'active' ? 'bg-emerald-500 animate-status-pulse' : 'bg-slate-500'}`} />
+                                            <span className={`text-[9px] font-black uppercase tracking-widest ${(s.status || 'inactive') === 'active' ? 'text-emerald-500' : 'text-slate-500'}`}>{s.status?.toUpperCase() || 'INACTIVE'}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 opacity-70">
-                                    <Clock size={10} /> 2m ago
+                                    <Clock size={10} /> Active
                                 </div>
                             </div>
 
                             <div className="mt-6 grid grid-cols-2 gap-4">
                                 <div>
-                                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">PnL Tracker</div>
-                                    <div className="text-lg font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">
-                                        +${(Math.random() * 15000 + 1000).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Simulated PnL</div>
+                                    <div className={`text-lg font-black ${s.simulated_pnl >= 0 ? 'text-emerald-400' : 'text-red-400'} drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]`}>
+                                        {s.simulated_pnl >= 0 ? '+' : ''}${parseFloat(s.simulated_pnl || 0).toLocaleString()}
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Win Rate / Trades</div>
+                                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Allocation</div>
                                     <div className="text-sm font-bold text-white">
-                                        {Math.floor(Math.random() * 30 + 60)}% <span className="text-slate-500 text-[10px] ml-1">/ {Math.floor(Math.random() * 50 + 10)}</span>
+                                        {s.allocation_percentage}%
                                     </div>
                                 </div>
                             </div>

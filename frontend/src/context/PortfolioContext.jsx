@@ -16,6 +16,20 @@ export const PortfolioProvider = ({ children }) => {
         copy_sources: []
     });
 
+    const [strategies, setStrategies] = useState([]);
+
+    const fetchStrategies = useCallback(async () => {
+        if (!user) return;
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`);
+            const data = await res.json();
+            if (data.strategies) setStrategies(data.strategies);
+        } catch (err) {
+            console.error("Failed to fetch strategies", err);
+        }
+    }, [user?.user_id]);
+
     const fetchPortfolio = useCallback(async () => {
         if (!user) return;
         try {
@@ -24,10 +38,13 @@ export const PortfolioProvider = ({ children }) => {
             const data = await res.json();
             if (data.portfolio) setPortfolio(data.portfolio);
             if (data.settings) setSettings(data.settings);
+            
+            // Also fetch actual strategies from the dedicated endpoint
+            await fetchStrategies();
         } catch (err) {
             console.error("Failed to fetch portfolio", err);
         }
-    }, [user?.user_id]);
+    }, [user?.user_id, fetchStrategies]);
 
     const fetchDefaults = useCallback(async () => {
         try {
@@ -193,7 +210,9 @@ export const PortfolioProvider = ({ children }) => {
     const value = useMemo(() => ({
         portfolio,
         settings,
+        strategies,
         refreshPortfolio: fetchPortfolio,
+        refreshStrategies: fetchStrategies,
         simulateTrade,
         updateCapital,
         addSource,
@@ -202,7 +221,7 @@ export const PortfolioProvider = ({ children }) => {
         linkPolymarket,
         wipeUserData,
         acceptDisclosure
-    }), [portfolio, settings, fetchPortfolio]);
+    }), [portfolio, settings, strategies, fetchPortfolio, fetchStrategies]);
 
     return (
         <PortfolioContext.Provider value={value}>

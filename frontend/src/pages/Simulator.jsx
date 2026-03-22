@@ -97,9 +97,7 @@ const SourceMultiselect = ({ platform, selected, onToggle, settings }) => {
 
 const StrategySandbox = () => {
     const { user } = useContext(AuthContext);
-    const { portfolio, settings, refreshPortfolio } = useContext(PortfolioContext);
-    const [strategies, setStrategies] = useState([]);
-    const [signals, setSignals] = useState([]);
+    const { portfolio, settings, strategies, refreshPortfolio, refreshStrategies } = useContext(PortfolioContext);
     const [wizardStep, setWizardStep] = useState(1);
     const [archetypes, setArchetypes] = useState({});
     const [loadingArchetypes, setLoadingArchetypes] = useState(true);
@@ -185,15 +183,15 @@ const StrategySandbox = () => {
         };
         fetchArchetypes();
     }, []);
+    const [signals, setSignals] = useState([]);
 
     useEffect(() => {
         if (!user) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const wsUrl = apiUrl.replace('http', 'ws');
         const fetchData = () => {
-            fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`).then(res => res.json()).then(data => setStrategies(data.strategies || [])).catch(err => console.error(err));
             fetch(`${apiUrl}/api/signals/?user_id=${user.user_id}`).then(res => res.json()).then(data => setSignals(data.signals || [])).catch(err => console.error(err));
-            refreshPortfolio();
+            refreshPortfolio(); // This also calls refreshStrategies
         };
         fetchData();
         let socket = null;
@@ -204,7 +202,8 @@ const StrategySandbox = () => {
                 socket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        if (data.strategies) setStrategies(data.strategies);
+                        // If the backend sends strategies via WS, we could update context or just re-trigger refresh
+                        if (data.strategies && refreshStrategies) refreshStrategies();
                     } catch (err) { console.error("WebSocket Msg Error:", err); }
                 };
                 socket.onopen = () => { if (pollInterval) clearInterval(pollInterval); };
@@ -217,7 +216,7 @@ const StrategySandbox = () => {
         };
         connectWS();
         return () => { if (socket) socket.close(); if (pollInterval) clearInterval(pollInterval); };
-    }, [user, refreshPortfolio]);
+    }, [user, refreshPortfolio, refreshStrategies]);
 
     const [previewData, setPreviewData] = useState({ expected_pnl_7d: 0, win_rate: 0, max_drawdown: 0, confidence_score: 0, recent_signals: [] });
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -252,9 +251,8 @@ const StrategySandbox = () => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const res = await fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            const data = await res.json();
             if (res.ok) {
-                setStrategies([...strategies, data.strategy]);
+                if (refreshStrategies) await refreshStrategies();
                 setShowToast({ message: "⚡ Strategy Initialized", subtext: `Projected ROI: +${previewData.win_rate > 50 ? '18' : '12'}%` });
                 setTimeout(() => setShowToast(null), 3000);
                 setWizardStep(1);
@@ -268,13 +266,13 @@ const StrategySandbox = () => {
         const action = currentStatus === 'active' ? 'stop' : 'resume';
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         await fetch(`${apiUrl}/api/strategies/${stratId}/${action}?user_id=${user.user_id}`, { method: 'POST' });
-        setStrategies(prev => prev.map(s => s.strategy_id === stratId ? { ...s, status: currentStatus === 'active' ? 'stopped' : 'active' } : s));
+        if (refreshStrategies) await refreshStrategies();
     };
 
     const removeStrategy = async (stratId) => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         await fetch(`${apiUrl}/api/strategies/${stratId}?user_id=${user.user_id}`, { method: 'DELETE' });
-        setStrategies(prev => prev.filter(s => s.strategy_id !== stratId));
+        if (refreshStrategies) await refreshStrategies();
     };
 
     const toggleSourceSelection = (address) => {
@@ -682,31 +680,31 @@ const StrategySandbox = () => {
                                             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mt-1">{s.platform} • {s.risk_mode}</div>
                                         </div>
                                     </div>
-                                    <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${s.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-800/10 text-slate-500 border-white/5'}`}>
-                                        {s.status}
+                                    <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${(s.status || 'inactive') === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-800/10 text-slate-500 border-white/5'}`}>
+                                        {s.status || 'inactive'}
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
                                         <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Current PnL</div>
-                                        <div className={`text-xl font-black tabular-nums transition-all ${s.simulated_pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        <div className={`text-xl font-black tabular-nums transition-all ${parseFloat(s.simulated_pnl || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                             ${parseFloat(s.simulated_pnl || 0).toFixed(2)}
                                         </div>
                                     </div>
                                     <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
                                         <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Allocation</div>
-                                        <div className="text-xl font-black text-white tabular-nums">{s.allocation_percentage}%</div>
+                                        <div className="text-xl font-black text-white tabular-nums">{s.allocation_percentage || 0}%</div>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => toggleStrategy(s.strategy_id, s.status)} 
-                                        className={`flex-1 flex gap-2 items-center justify-center py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${s.status === 'active' ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20'}`}
+                                        onClick={() => toggleStrategy(s.strategy_id, s.status || 'inactive')} 
+                                        className={`flex-1 flex gap-2 items-center justify-center py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${(s.status || 'inactive') === 'active' ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20'}`}
                                     >
-                                        {s.status === 'active' ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                                        {s.status === 'active' ? 'Deactivate' : 'Reactuate'}
+                                        {(s.status || 'inactive') === 'active' ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                                        {(s.status || 'inactive') === 'active' ? 'Deactivate' : 'Reactuate'}
                                     </button>
                                     <button 
                                         onClick={() => removeStrategy(s.strategy_id)} 

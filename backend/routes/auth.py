@@ -17,6 +17,30 @@ class GoogleLogin(BaseModel):
     credential: str
     referral_code: Optional[str] = None
 
+@router.post("/mock")
+def mock_auth(data: dict):
+    """Bypass Google auth for local E2E testing."""
+    email = data.get("email", "test_whale@whalesync.com")
+    username = data.get("username", "Test Whale")
+    picture = "https://lh3.googleusercontent.com/a/ACg8ocL-X"
+    
+    db_user = get_user_by_email(email)
+    if not db_user:
+        db_user = create_user(email, username, picture)
+    
+    token = create_access_token(data={"sub": db_user['userId'], "username": db_user.get('username', 'User')})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "user_id": db_user['userId'],
+            "username": db_user.get('username', 'User'),
+            "email": db_user['email'],
+            "subscription_tier": db_user.get('subscription_tier', 'free'),
+            "simulation_capital": float(db_user.get('simulation_capital', 10000.0))
+        }
+    }
+
 @router.post("/google")
 def google_auth(data: GoogleLogin):
     try:
