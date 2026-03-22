@@ -5,6 +5,7 @@ import RiskMeter from '../components/RiskMeter';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { PortfolioContext } from '../context/PortfolioContext';
+import AlphaTicker from '../components/AlphaTicker';
 
 function UpgradeModal({ isOpen, onClose }) {
     if (!isOpen) return null;
@@ -39,43 +40,6 @@ function UpgradeModal({ isOpen, onClose }) {
         </div>
     );
 }
-
-// 🚀 High-Conversion Component: Live Alpha Alert Bar
-const OpportunityStrip = () => {
-    const opportunities = [
-        { label: "US Election Whale Activity", amount: "$124,500", time: "2m left", type: "CRITICAL" },
-        { label: "Crypto Sentiment Spike", amount: "+$4.2k Potential", time: "8m left", type: "HOT" },
-        { label: "OracleWhale just entered YES", amount: "$18,000", time: "Just now", type: "WHALE" },
-        { label: "New Alpha Signal: BTC ETF", amount: "94% Conf", time: "15m left", type: "SIGNAL" }
-    ];
-
-    return (
-        <div className="relative mb-10 h-12 rounded-2xl border border-primary/30 bg-primary/5 shadow-inner overflow-hidden flex items-center">
-            <div className="absolute left-0 z-20 h-full flex items-center px-6 bg-primary text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl">
-                LIVE ALPHA
-            </div>
-            <div className="flex gap-16 py-2 animate-marquee whitespace-nowrap pl-40">
-                {[...opportunities, ...opportunities, ...opportunities].map((op, i) => (
-                    <div key={i} className="flex items-center gap-6 border-r border-white/10 pr-16 h-8">
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
-                            op.type === 'CRITICAL' ? 'bg-red-500/10 border-red-500 text-red-500' : 
-                            op.type === 'HOT' ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 
-                            'bg-primary/10 border-primary text-primary'
-                        }`}>
-                            {op.type}
-                        </span>
-                        <span className="text-[11px] font-bold text-white uppercase tracking-tight">{op.label}</span>
-                        <span className="text-[11px] font-black text-emerald-400 tabular-nums">{op.amount}</span>
-                        <div className="flex items-center gap-2 text-slate-500">
-                            <Clock size={12} className="opacity-50" />
-                            <span className="text-[10px] font-black uppercase tracking-tighter">{op.time}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 // 🐳 Addictive Component: Whale Activity Live Feed
 const WhaleActivityFeed = () => {
@@ -487,7 +451,7 @@ const Leaderboard = () => {
     return (
         <div className="w-full animate-fade-in relative z-10 pb-20">
             {/* 🎲 Opportunity Strip (FOMO) */}
-            <OpportunityStrip />
+            <AlphaTicker />
 
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-10 items-start">
                 {/* 🐳 Main Leaderboard (Left Column) */}

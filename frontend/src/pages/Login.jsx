@@ -4,34 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Activity, Brain, Target, Globe, Zap, Clock, Sparkles, Shield, TrendingUp, BarChart3, Users } from 'lucide-react';
 
-const AlphaTicker = () => {
-    const opportunities = [
-        { label: "US Election Whale Activity", amount: "$124,500", time: "2m left", type: "CRITICAL" },
-        { label: "Crypto Sentiment Spike", amount: "+$4.2k Potential", time: "8m left", type: "HOT" },
-        { label: "OracleWhale just entered YES", amount: "$18,000", time: "Just now", type: "WHALE" },
-        { label: "New Alpha Signal: BTC ETF", amount: "94% Conf", time: "15m left", type: "SIGNAL" }
-    ];
-
-    return (
-        <div className="w-full bg-primary/10 border-b border-primary/20 h-10 flex items-center overflow-hidden whitespace-nowrap relative z-[60]">
-            <div className="absolute left-0 z-20 h-full flex items-center px-4 bg-primary text-[8px] font-black uppercase tracking-[0.2em] text-white">
-                LIVE ALPHA
-            </div>
-            <div className="flex gap-12 animate-marquee">
-                {[...opportunities, ...opportunities].map((op, i) => (
-                    <div key={i} className="flex items-center gap-4 text-[10px] font-bold">
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${
-                            op.type === 'CRITICAL' ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-primary/20 border-primary/40 text-primary'
-                        }`}>{op.type}</span>
-                        <span className="text-white/60 uppercase">{op.label}</span>
-                        <span className="text-emerald-400 font-black tracking-tighter">{op.amount}</span>
-                        <span className="text-white/30 font-black tracking-tighter uppercase">{op.time}</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
+import AlphaTicker from '../components/AlphaTicker';
 
 const LeaderboardPreview = () => {
     const [traders, setTraders] = useState([]);
@@ -122,7 +95,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 overflow-x-hidden animate-fade-in flex flex-col">
-            <AlphaTicker />
+            <AlphaTicker variant="mini" />
             
             <main className="flex-1 flex flex-col items-center">
                 {/* Hero Section */}
