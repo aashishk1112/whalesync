@@ -58,10 +58,10 @@ const LeaderboardPreview = () => {
                                     </div>
                                 </td>
                                 <td className="py-4 px-8 text-right text-emerald-400 font-black text-xs tabular-nums">
-                                    +${((trader.roi || 0) * 1240).toLocaleString()}
+                                    +${(parseFloat(trader.pnl || trader.volume * (trader.roi||0)/100 || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </td>
                                 <td className="py-4 px-8 text-right text-white font-black text-xs tabular-nums">
-                                    {(trader.win_rate * 100).toFixed(0)}%
+                                    {((trader.win_rate || 0) * 100).toFixed(0)}%
                                 </td>
                             </tr>
                         ))}

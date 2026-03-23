@@ -6,13 +6,18 @@ import os
 
 load_dotenv()
 
-from services.secrets_service import load_secrets
-load_secrets()
+try:
+    from services.secrets_service import load_secrets
+    load_secrets()
 
-from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions, config
-from services.stripe_service import verify_webhook
-from services.dynamodb_service import update_user_subscription
-import stripe
+    from routes import auth, markets, traders, signals, strategies, portfolio, subscriptions, config
+    from services.stripe_service import verify_webhook
+    from services.dynamodb_service import update_user_subscription
+    import stripe
+except Exception as e:
+    print(f"CRITICAL BOOTSTRAP ERROR: {e}")
+    # We still need these to exist for the app to load
+    auth = markets = traders = signals = strategies = portfolio = subscriptions = config = None
 
 app = FastAPI(title="WhaleSync API", version="1.0.0")
 

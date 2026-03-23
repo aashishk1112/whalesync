@@ -43,11 +43,31 @@ function UpgradeModal({ isOpen, onClose }) {
 
 // 🐳 Addictive Component: Whale Activity Live Feed
 const WhaleActivityFeed = () => {
-    const feeds = [
-        { user: "OracleWhale", action: "COPIED", target: "Polymarket", amount: "$4,200", time: "2s" },
-        { user: "KalshiKing", action: "CASHED OUT", target: "Kalshi", amount: "$12,400", time: "15s" },
-        { user: "PredictionBot", action: "ENTERED", target: "Polymarket", amount: "$800", time: "45s" }
-    ];
+    const [feeds, setFeeds] = useState([]);
+
+    useEffect(() => {
+        const fetchFeeds = async () => {
+             try {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const res = await fetch(`${apiUrl}/api/markets/ticker/signals`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.signals && data.signals.length > 0) {
+                        setFeeds(data.signals.slice(0, 5).map(s => ({
+                            user: s.type === 'WHALE' ? 'Whale' : 'System',
+                            action: s.type,
+                            target: "Polymarket",
+                            amount: s.amount,
+                            time: s.time
+                        })));
+                    }
+                }
+             } catch(err) {}
+        };
+        fetchFeeds();
+        const interval = setInterval(fetchFeeds, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className="hidden lg:flex flex-col gap-4 p-6 bg-slate-900/20 backdrop-blur-md rounded-2xl border border-slate-800/50 sticky top-24 h-fit max-w-[240px]">
@@ -55,14 +75,16 @@ const WhaleActivityFeed = () => {
                 <Activity size={12} className="text-primary" /> LIVE WHALE FEED
             </h4>
             <div className="space-y-4">
-                {feeds.map((f, i) => (
+                {feeds.length === 0 ? (
+                    <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest animate-pulse">Scanning Orderbook...</div>
+                ) : feeds.map((f, i) => (
                     <div key={i} className="animate-fade-in group/item">
                         <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[11px] font-black text-white truncate pr-2">@{f.user}</span>
-                            <span className="text-[9px] font-bold text-slate-600 tabular-nums">{f.time} ago</span>
+                            <span className="text-[9px] font-bold text-slate-600 tabular-nums">{f.time}</span>
                         </div>
                         <div className="text-[10px] font-black">
-                            <span className={f.action === 'CASHED OUT' ? 'text-emerald-400' : 'text-primary'}>{f.action} </span>
+                            <span className={f.action === 'CRITICAL' ? 'text-red-400' : 'text-primary'}>{f.action} </span>
                             <span className="text-white font-mono">{f.amount}</span>
                         </div>
                         <div className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1">{f.target}</div>
@@ -75,12 +97,12 @@ const WhaleActivityFeed = () => {
     );
 };
 
-const TraderRow = ({ trader, idx, formatCurrency, onMirror, isPro, isSelected, onSelect }) => {
+const TraderRow = ({ trader, idx, formatCurrency, onMirror, isPro, isSelected, onSelect, isFollowing, isFull, onUpgrade }) => {
     // Derived/Simulated Metrics
-    const movement = trader.rank_movement || (idx % 2 === 0 ? 2 : -1);
-    const winStreak = trader.win_streak || (idx === 0 ? 8 : idx === 1 ? 5 : 3);
-    const maxDrawdown = trader.max_drawdown || 4.2 + (idx * 0.5);
-    const realizedProfit = (trader.volume || 10000) * (trader.roi || 0.1) / 100;
+    const movement = trader.rank_movement || 0;
+    const winStreak = trader.win_streak || 0;
+    const maxDrawdown = trader.max_drawdown || 0;
+    const realizedProfit = (trader.volume || 0) * (trader.roi || 0) / 100;
 
     return (
         <tr 
@@ -168,10 +190,21 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror, isPro, isSelected, o
             {/* ACTION COLUMN */}
             <td className="py-5 px-6 text-right">
                 <button 
-                    onClick={(e) => { e.stopPropagation(); onMirror(trader); }}
-                    className="px-5 py-2.5 bg-primary text-white border border-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-transparent hover:text-primary transition-all shadow-lg shadow-primary/20"
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (isFull && !isFollowing) {
+                            onUpgrade();
+                        } else {
+                            onMirror(trader); 
+                        }
+                    }}
+                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg border ${
+                        isFull && !isFollowing 
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/50 hover:bg-amber-500 hover:text-white' 
+                            : 'bg-primary text-white border-primary hover:bg-transparent hover:text-primary shadow-primary/20'
+                    }`}
                 >
-                    SCALE ALPHA
+                    {isFull && !isFollowing ? 'UPGRADE' : (isFollowing ? 'SYNC ACTIVE' : 'SCALE ALPHA')}
                 </button>
             </td>
         </tr>
@@ -179,7 +212,7 @@ const TraderRow = ({ trader, idx, formatCurrency, onMirror, isPro, isSelected, o
 };
 
 // 🏛️ Institutional Action Panel (Sticky Right Column)
-const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
+const ActionPanel = ({ trader, formatCurrency, onMirror, isFollowing, isFull, onUpgrade }) => {
     const [activeTab, setActiveTab] = useState('DNA');
     const [simAmount, setSimAmount] = useState(1000);
     
@@ -334,17 +367,10 @@ const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
 
                     {activeTab === 'INTEL' && (
                         <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map(t => (
-                                <div key={t} className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800/50 border-l-4 border-l-primary group/signal hover:bg-slate-800/60 transition-all">
-                                    <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase mb-2 tracking-widest">
-                                        <span>TXN-{892 + t}</span>
-                                        <span className="flex items-center gap-1"><Clock size={10} /> {t}m ago</span>
-                                    </div>
-                                    <div className="text-xs font-bold text-white leading-relaxed">
-                                        Deployed <span className="text-emerald-400">$2.4k</span> vector on <span className="text-primary italic">Market #92</span>
-                                    </div>
-                                </div>
-                            ))}
+                            <div className="flex flex-col items-center justify-center p-8 opacity-50">
+                                <Activity size={24} className="text-primary mb-2 animate-pulse" />
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Awaiting Live Signals from Oracle Node</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -353,14 +379,26 @@ const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
             {/* Footer: Multi-line CTA */}
             <div className="p-8 bg-slate-950/50 border-t border-slate-800/50">
                 <button 
-                    onClick={() => onMirror(trader)}
-                    className="w-full relative group/btn overflow-hidden rounded-[24px] border border-primary/50 shadow-2xl transition-all"
+                    onClick={() => {
+                        if (isFull && !isFollowing) {
+                            onUpgrade();
+                        } else {
+                            onMirror(trader);
+                        }
+                    }}
+                    className={`w-full relative group/btn overflow-hidden rounded-[24px] border shadow-2xl transition-all ${
+                         isFull && !isFollowing ? 'border-amber-500/50' : 'border-primary/50'
+                    }`}
                 >
-                    <div className="absolute inset-0 bg-primary group-hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]" />
+                    <div className={`absolute inset-0 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] ${
+                        isFull && !isFollowing ? 'bg-amber-600 group-hover:bg-amber-500' : 'bg-primary group-hover:bg-primary/90'
+                    }`} />
                     <div className="relative py-6 flex flex-col gap-1.5 items-center">
                         <div className="flex items-center gap-3">
                             <Zap size={16} className="text-white fill-white animate-pulse" />
-                            <span className="text-[14px] font-black text-white uppercase tracking-[0.25em]">SCALE ALPHA VECTOR</span>
+                            <span className="text-[14px] font-black text-white uppercase tracking-[0.25em]">
+                                {isFull && !isFollowing ? 'UPGRADE SYSTEM' : (isFollowing ? 'SYNC ACTIVE ALPHA' : 'SCALE ALPHA VECTOR')}
+                            </span>
                         </div>
                         <div className="flex items-center gap-5 text-[10px] font-bold text-white/50 uppercase tracking-widest">
                             <span className="tabular-nums">Est: +{formatCurrency((simAmount || 1000) * 0.15)}/wk</span>
@@ -376,7 +414,7 @@ const ActionPanel = ({ trader, formatCurrency, onMirror }) => {
 
 const Leaderboard = () => {
     const { user } = React.useContext(AuthContext);
-    const { refreshStrategies } = React.useContext(PortfolioContext);
+    const { settings, refreshStrategies } = React.useContext(PortfolioContext);
     const navigate = useNavigate();
     const [traders, setTraders] = useState([]);
     const [archetypes, setArchetypes] = useState(null);
@@ -401,19 +439,36 @@ const Leaderboard = () => {
         setMirroringStatus('Initializing System...');
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${user.user_id}`, {
+            const userId = user.user_id || user.userId;
+            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${userId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address: trader.address, username: trader.username || 'Anonymous', risk_mode: 'Balanced' })
+                body: JSON.stringify({ 
+                    address: trader.address || '0x0000000000000000000000000000000000000000', 
+                    username: trader.username || 'Anonymous Whale', 
+                    risk_mode: 'Balanced' 
+                })
             });
             if (res.status === 403) { setIsUpgradeModalOpen(true); setMirroringStatus(null); return; }
             
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error("Failed to create mirror strategy", errorData);
+                setMirroringStatus(null);
+                alert(`Failed to create strategy: ${errorData.detail || 'Unknown error'}`);
+                return;
+            }
+
             // Refresh strategies in context so Dashboard/Simulator are up to date
             if (refreshStrategies) await refreshStrategies();
             
             setMirroringStatus('System Active!');
             setTimeout(() => { navigate('/simulator'); }, 800);
-        } catch (err) { setMirroringStatus(null); }
+        } catch (err) { 
+            console.error(err);
+            setMirroringStatus(null); 
+            alert("Network error while creating strategy.");
+        }
     };
 
     useEffect(() => {
@@ -512,18 +567,26 @@ const Leaderboard = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    traders.map((trader, idx) => (
-                                        <TraderRow 
-                                            key={trader.address || idx} 
-                                            trader={trader} 
-                                            idx={idx} 
-                                            formatCurrency={formatCurrency} 
-                                            onMirror={handleMirror} 
-                                            isPro={isPro}
-                                            isSelected={selectedTrader?.address === trader.address}
-                                            onSelect={setSelectedTrader}
-                                        />
-                                    ))
+                                    traders.map((trader, idx) => {
+                                        const isFollowing = settings?.copy_sources?.some(s => s.address === trader.address);
+                                        const isFull = (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 10);
+                                        
+                                        return (
+                                            <TraderRow 
+                                                key={trader.address || idx} 
+                                                trader={trader} 
+                                                idx={idx} 
+                                                formatCurrency={formatCurrency} 
+                                                onMirror={handleMirror} 
+                                                isPro={isPro}
+                                                isSelected={selectedTrader?.address === trader.address}
+                                                onSelect={setSelectedTrader}
+                                                isFollowing={isFollowing}
+                                                isFull={isFull}
+                                                onUpgrade={() => setIsUpgradeModalOpen(true)}
+                                            />
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -536,6 +599,9 @@ const Leaderboard = () => {
                         trader={selectedTrader} 
                         formatCurrency={formatCurrency} 
                         onMirror={handleMirror} 
+                        isFollowing={settings?.copy_sources?.some(s => s.address === selectedTrader?.address)}
+                        isFull={(settings?.copy_sources?.length || 0) >= (settings?.source_slots || 10)}
+                        onUpgrade={() => setIsUpgradeModalOpen(true)}
                     />
                     
                     {/* Secondary Nudge Widget */}

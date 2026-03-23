@@ -10,7 +10,8 @@ from services.dynamodb_service import (
     update_strategy_status,
     record_trade,
     delete_strategy,
-    get_user_by_id
+    get_user_by_id,
+    add_copy_source
 )
 from services.polymarket_service import polymarket_service
 
@@ -78,7 +79,6 @@ def get_strategies(user_id: str):
                                 market_cat = market_details.get("category", "")
                                 if market_cat.lower() == strategy_category.lower():
                                     trade_allowed = True
-                                    print(f"Category match: {market_cat} for strategy {s['name']}")
                             
                             if trade_allowed:
                                 # Calculate trade amount based on strategy-specific bet size
@@ -88,43 +88,60 @@ def get_strategies(user_id: str):
                                 
                                 trade_amount = (bet_percentage / 100.0) * initial_alloc
                                 
-                                # Risk Mode Adjustment (Conservative: smaller trades, Aggressive: larger trades)
+                                # Risk Mode Adjustment
                                 risk_mode = s.get("risk_mode", "Balanced")
                                 if risk_mode == "Conservative": trade_amount *= 0.5
                                 elif risk_mode == "Aggressive": trade_amount *= 1.5
 
-                                # Hard Stop: If trade amount > remaining strategy balance, do not execute
+                                # Hard Stop
                                 if trade_amount > strategy_balance:
-                                    print(f"STOPPED trade for strategy {s['name']}: Not enough strategy balance")
                                     continue
 
                                 # Mirror this trade into our simulator
                                 side = str(rt.get("side") or "").upper()
+                                
+                                # Extract better market label if available (slug or title)
+                                market_label = rt.get("proxyTitle") or rt.get("slug") or market_id
+
                                 new_trade = record_trade(
                                     user_id=user_id,
                                     strategy_id=s["strategy_id"],
-                                    market_id=market_id,
+                                    market_id=market_label, # Use cleaner label
                                     position="YES" if side == "BUY" else "NO",
                                     price=float(rt.get("price", 0.5)),
                                     amount=trade_amount,
                                     category=s.get("category", "All"),
-                                    tx_hash=tx_hash
+                                    tx_hash=tx_hash,
+                                    timestamp=rt.get("timestamp") # Pass real Polymarket time
                                 )
                                 if new_trade:
                                     strategy_trades.append(new_trade)
+                                    existing_tx_hashes.add(tx_hash) # IMPORTANT: Prevent duplicates in same request
                                     s["strategy_balance"] = float(s["strategy_balance"]) - trade_amount
                 except Exception as e:
                     print(f"Sync error for {addr}: {e}")
 
+        # Deduplicate strategy_trades before PnL calculation to avoid hyper-inflated numbers
+        deduped_trades = []
+        seen_tx = set()
+        for t in strategy_trades:
+            tid = t.get("tx_hash") or t.get("trade_id")
+            if tid not in seen_tx:
+                seen_tx.add(tid)
+                deduped_trades.append(t)
+        
         # Calculate live PnL based on latest market prices
         total_pnl = 0.0
         market_prices = {}
-        for t in strategy_trades:
+        for t in deduped_trades:
             if t.get("status") == "open":
                 m_id = t["market_id"]
                 if m_id not in market_prices:
-                    try: market_prices[m_id] = polymarket_service.get_market_price(m_id)
-                    except: market_prices[m_id] = float(t.get("price", 0.5))
+                    try: 
+                        # Use market_label/id to fetch price
+                        market_prices[m_id] = polymarket_service.get_market_price(m_id)
+                    except: 
+                        market_prices[m_id] = float(t.get("price", 0.5))
                 
                 curr_price = market_prices[m_id]
                 entry_price = float(t.get("price", 0.5))
@@ -181,14 +198,32 @@ def create_strategy(strategy: StrategyCreate, user_id: str):
 
 @router.post("/mirror")
 def mirror_trader(request: MirrorRequest, user_id: str):
-    """One-click mirroring helper."""
+    """One-click mirroring helper. Also adds address to user follow list."""
     db_user = get_user_by_id(user_id)
     if not db_user: raise HTTPException(status_code=404, detail="User not found")
         
-    strategies = get_user_strategies(user_id)
-    if len(strategies) >= int(db_user.get("source_slots", 10)):
-        raise HTTPException(status_code=403, detail="SLOTS_FULL")
+    current_sources = db_user.get("copy_sources", [])
+    source_slots = int(db_user.get("source_slots", 10))
+    
+    # 1. Check if already followed, or add if not full
+    is_followed = any(s.get("address") == request.address for s in current_sources)
+    if not is_followed:
+        if len(current_sources) >= source_slots:
+            raise HTTPException(status_code=403, detail="SLOTS_FULL")
         
+        # Add to copy_sources automatically
+        new_source = {
+            "id": str(uuid.uuid4()),
+            "platform": "Polymarket",
+            "address": request.address,
+            "name": request.username,
+            "active": True,
+            "added_at": str(uuid.uuid4()) # Keeping consistency with portfolio.py
+        }
+        add_copy_source(user_id, new_source)
+        
+    # 2. Strategy Check
+    strategies = get_user_strategies(user_id)
     active_total = sum(float(s.get("allocation_percentage") or 0) for s in strategies)
     allowance = min(10.0, 100.0 - active_total)
     
@@ -244,7 +279,18 @@ def preview_strategy(request: PreviewRequest):
 @router.get("/{strategy_id}/trades")
 def get_strategy_trades(strategy_id: str):
     from services.dynamodb_service import get_strategy_trades as db_get_trades
-    return {"trades": db_get_trades(strategy_id)}
+    raw_trades = db_get_trades(strategy_id)
+    
+    # Deduplicate by tx_hash if present, else trade_id
+    seen_hashes = set()
+    unique_trades = []
+    for t in sorted(raw_trades, key=lambda x: x.get("created_at", ""), reverse=True):
+        h = t.get("tx_hash") or t.get("trade_id")
+        if h not in seen_hashes:
+            seen_hashes.add(h)
+            unique_trades.append(t)
+            
+    return {"trades": unique_trades}
 
 @router.post("/{strategy_id}/resume")
 def resume_strategy(strategy_id: str):
@@ -315,8 +361,9 @@ async def strategy_websocket(websocket: WebSocket, user_id: str):
         
         # Keep alive and handle incoming (if any)
         while True:
-            # Periodically push updates every 5 seconds for simulation feel
-            await asyncio.sleep(5)
+            # Periodically push updates every 15 seconds for simulation feel
+            # Increased interval to reduce server load and costs
+            await asyncio.sleep(15)
             data = get_strategies(user_id)
             await websocket.send_text(json.dumps(data))
             

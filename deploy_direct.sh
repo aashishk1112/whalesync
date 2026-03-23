@@ -203,7 +203,7 @@ mkdir backend_build
 # Copy only source files, excluding venv and other junk
 rsync -av --exclude 'venv' --exclude '__pycache__' --exclude '.env' --exclude '.git' --exclude 'backend_build' backend/ backend_build/
 cd backend_build
-python3 -m pip install --target . -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all:
+python3 -m pip install --target . -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: --implementation cp --python-version 3.11
 zip -r ../backend.zip .
 cd ..
 

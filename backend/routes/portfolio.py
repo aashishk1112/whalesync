@@ -54,7 +54,17 @@ def get_my_portfolio(user_id: str):
         
     from services.polymarket_service import polymarket_service
     
-    trades = get_user_trades(user_id)
+    raw_trades = get_user_trades(user_id)
+    
+    # Deduplicate trades to ensure accurate PnL and UI
+    trades = []
+    seen_tx = set()
+    for t in raw_trades:
+        tid = t.get("tx_hash") or t.get("trade_id")
+        if tid not in seen_tx:
+            seen_tx.add(tid)
+            trades.append(t)
+
     total_resolved: int = 0
     wins: int = 0
     total_invested_resolved: float = 0.0

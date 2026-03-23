@@ -7,10 +7,7 @@ import uuid
 import random
 import string
 from boto3.dynamodb.conditions import Key, Attr
-from dotenv import load_dotenv
-
-# Load environment variables for local development
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.development"))
+# We let main.py handle dotenv or rely on Lambda's injected environment variables.
 
 # In SAM/Lambda environment, table names will be injected via environment variables
 env = os.environ.get("ENVIRONMENT", "dev")
@@ -34,15 +31,29 @@ if _endpoint:
     print(f"[DynamoDB] Using local endpoint: {_endpoint}")
     _kwargs["endpoint_url"] = _endpoint
 
+# Setup DynamoDB resource
 dynamodb = boto3.resource("dynamodb", **_kwargs)
 
-users_table = dynamodb.Table(USERS_TABLE)
-markets_table = dynamodb.Table(MARKETS_TABLE)
-trades_table = dynamodb.Table(TRADES_TABLE)
-strategies_table = dynamodb.Table(STRATEGIES_TABLE)
-subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
-system_table = dynamodb.Table(SYSTEM_TABLE)
-referral_usage_table = dynamodb.Table(REFERRAL_USAGE_TABLE)
+# Initialize table variables to None first to avoid NameError
+users_table = None
+markets_table = None
+trades_table = None
+strategies_table = None
+subscription_tiers_table = None
+system_table = None
+referral_usage_table = None
+
+try:
+    users_table = dynamodb.Table(USERS_TABLE)
+    markets_table = dynamodb.Table(MARKETS_TABLE)
+    trades_table = dynamodb.Table(TRADES_TABLE)
+    strategies_table = dynamodb.Table(STRATEGIES_TABLE)
+    subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
+    system_table = dynamodb.Table(SYSTEM_TABLE)
+    referral_usage_table = dynamodb.Table(REFERRAL_USAGE_TABLE)
+    print(f"[DynamoDB] Successfully initialized table references for environment: {env}")
+except Exception as e:
+    print(f"[DynamoDB] CRITICAL ERROR during table initialization: {e}")
 
 # --- Subscription Tier Management ---
 _subscription_tiers_cache = {}
@@ -391,7 +402,7 @@ def list_markets_by_platform(platform: Optional[str] = None) -> List[Dict[str, A
         return response.get("Items", [])
 
 # --- Trades & Portfolio Ops ---
-def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: Optional[str] = None, timestamp: Optional[Any] = None) -> Optional[Dict[str, Any]]:
     # 1. Update Strategy Balance with hard stop if fully depleted
     try:
         strategies_table.update_item(
@@ -413,9 +424,6 @@ def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, 
             ExpressionAttributeValues={":amt": Decimal(str(amount))}
         )
     except Exception as e:
-        # Rolled back strategy balance implicitly? No, need to manually revert or handle gracefully
-        # In this simple model, we'll just log and fail, but atomicity would be handled by transactions in prod
-        print(f"ERROR [record_trade]: Global balance deduction failed for user {user_id}. amount={amount}. Error: {e}")
         # Manual Rollback for strategy balance
         strategies_table.update_item(
             Key={"strategy_id": strategy_id},
@@ -423,6 +431,18 @@ def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, 
             ExpressionAttributeValues={":amt": Decimal(str(amount))}
         )
         return None
+
+    # Process timestamp
+    created_at = get_now_iso()
+    if timestamp:
+        try:
+            if isinstance(timestamp, (int, float)):
+                # If it's a unix timestamp
+                created_at = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).isoformat()
+            elif isinstance(timestamp, str):
+                created_at = timestamp # Already iso or formatted
+        except:
+            pass
 
     trade_id = str(uuid.uuid4())
     trade_item = {
@@ -435,7 +455,7 @@ def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, 
         "price": Decimal(str(price)),
         "category": category,
         "tx_hash": tx_hash,
-        "created_at": get_now_iso(),
+        "created_at": created_at,
         "status": "open" # Initial status
     }
     

@@ -37,6 +37,8 @@ const ProtectedRoute = ({ children }) => {
 
 const Layout = ({ children }) => {
   const { user, logout } = React.useContext(AuthContext);
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+
   return (
     <>
       <header className="app-header border-b border-white/10 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 py-4">
@@ -70,8 +72,20 @@ const Layout = ({ children }) => {
                   <span className="text-xs font-bold text-white uppercase tracking-widest">{user.username}</span>
                 </div>
                 <button
-                  className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/10 transition-all"
-                  onClick={() => { if (window.confirm('Are you sure you want to log out?')) logout(); }}
+                  id="logout-button"
+                  style={{
+                    position: 'relative',
+                    zIndex: 9999,
+                    pointerEvents: 'auto',
+                    cursor: 'pointer',
+                    display: 'flex'
+                  }}
+                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase border border-red-500/20 transition-all"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowLogoutModal(true);
+                  }}
                 >
                   Logout
                 </button>
@@ -80,6 +94,33 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </header>
+      
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+            <h2 className="text-xl font-bold text-white mb-2">Confirm Logout</h2>
+            <p className="text-slate-400 mb-6 text-sm">Are you sure you want to log out of WhaleSync?</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowLogoutModal(false)} 
+                className="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => { 
+                  logout(); 
+                  window.location.href = '/login'; 
+                }} 
+                className="px-4 py-2 rounded-xl text-sm font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="app-container pb-20">
         {children}
       </main>

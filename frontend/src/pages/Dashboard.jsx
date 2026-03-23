@@ -2,11 +2,12 @@ import React, { useState, useEffect, useContext } from 'react';
 import { PortfolioContext } from '../context/PortfolioContext';
 import { AuthContext } from '../context/AuthContext';
 import { TrendingUp, Activity, DollarSign, ArrowUpRight, ArrowDownRight, UserPlus, Target, Plus, Zap, Briefcase, Clock, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
     const { portfolio, settings, strategies, addSource, refreshStrategies } = useContext(PortfolioContext);
     const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [signals, setSignals] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [activeTab, setActiveTab] = useState('Polymarket');
@@ -31,15 +32,9 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        if (!user?.user_id) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        // Fetch consensus signals
-        fetch(`${apiUrl}/api/signals?user_id=${user.user_id}`)
-            .then(res => res.json())
-            .then(data => setSignals(data.signals || []))
-            .catch(err => console.error(err));
-
-        // Fetch daily leaderboard
+        
+        // Fetch daily leaderboard (Public info)
         setIsLoadingLeaderboard(true);
         fetch(`${apiUrl}/api/markets/leaderboard?limit=10`)
             .then(res => res.json())
@@ -51,7 +46,7 @@ const Dashboard = () => {
                 console.error(err);
                 setIsLoadingLeaderboard(false);
             });
-    }, [user]);
+    }, []); // Only run once on mount since this is a public preview block
 
     const handleFollow = async (trader) => {
         const result = await addSource({
@@ -80,6 +75,39 @@ const Dashboard = () => {
         setTimeout(() => {
             setNotification(null);
         }, duration);
+    };
+
+    const handleMirror = async (trader) => {
+        if (!user) { alert("Please login to scale profits."); return; }
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const userId = user.user_id || user.userId;
+            const res = await fetch(`${apiUrl}/api/strategies/mirror?user_id=${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    address: trader.proxyWallet || trader.address || '0x0000000000000000000000000000000000000000', 
+                    username: trader.userName || trader.username || 'Anonymous Whale', 
+                    risk_mode: 'Balanced' 
+                })
+            });
+            
+            if (res.status === 403) {
+                setNotification({ 
+                    type: 'error', 
+                    message: "You've reached your follow limit! Upgrade your plan to scale this alpha.",
+                    isLimitError: true 
+                });
+                return;
+            }
+            
+            if (res.ok) {
+                if (refreshStrategies) await refreshStrategies();
+                navigate('/simulator');
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     return (
@@ -117,7 +145,7 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-white/5 pb-6">
                 <div>
                     <h1 className="text-3xl font-black text-white tracking-tighter mb-1 relative inline-block">
-                        Commander <span className="text-primary">{user?.user_name || 'OxAashish'}</span>
+                        Commander <span className="text-primary">{user?.username || user?.user_name || 'Anonymous'}</span>
                         <Sparkles size={16} className="absolute -top-1 -right-4 text-emerald-400 animate-pulse" />
                     </h1>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2">
@@ -130,33 +158,16 @@ const Dashboard = () => {
                             <span className="text-[9px] font-black tracking-widest uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded cursor-help hover:bg-indigo-500/20 transition-colors" title="Joined during Beta Phase">
                                 🎖️ Early Adopter
                             </span>
-                            <span className="text-[9px] font-black tracking-widest uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded cursor-help hover:bg-amber-500/20 transition-colors" title="Held a strategy during 20% drawdown">
-                                💎 Diamond Hands
-                            </span>
                         </div>
                     </div>
                 </div>
                 
-                <div className="mt-6 md:mt-0 bg-slate-900/60 border border-white/10 rounded-2xl px-5 py-4 flex items-center gap-8 backdrop-blur-md shadow-2xl hover:border-primary/20 transition-all cursor-default relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
-                    <div>
-                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <Target size={10} className="text-primary" /> Current Tier
-                        </div>
-                        <div className="text-base font-black text-white flex items-center gap-2 tracking-wide">
-                            🐋 WHALE <span className="text-[10px] text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-widest">Level 4</span>
-                        </div>
+                <div className="mt-6 md:mt-0 bg-slate-900/60 border border-white/10 rounded-2xl px-5 py-4 flex flex-col items-center justify-center backdrop-blur-md shadow-2xl relative overflow-hidden group min-w-[200px] opacity-70">
+                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                        <Target size={10} className="text-primary" /> Current Tier
                     </div>
-                    <div className="w-40 relative z-10">
-                        <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
-                            <span>{xp.toLocaleString()} XP</span>
-                            <span className="text-primary">50k XP</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
-                            <div className="h-full bg-gradient-to-r from-primary/80 to-primary relative overflow-hidden transition-all duration-1000 ease-out" style={{ width: `${(xp / 50000) * 100}%` }}>
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmer_2s_infinite]" />
-                            </div>
-                        </div>
+                    <div className="text-sm font-black text-white uppercase tracking-widest tabular-nums border border-white/10 bg-white/5 px-4 py-1.5 rounded-lg mt-1">
+                        Coming Soon
                     </div>
                 </div>
             </div>
@@ -169,13 +180,13 @@ const Dashboard = () => {
                         <Briefcase size={14} className="text-primary" /> PORTFOLIO VALUE
                     </div>
                     <div className="text-4xl font-black text-white mb-2 tracking-tighter drop-shadow-sm font-mono">
-                        $21,576.10
+                        ${(portfolio?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="text-sm font-black text-emerald-500 animate-pulse-glow bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                            +$2,340 (+3.2%)
+                        <div className={`text-sm font-black animate-pulse-glow px-3 py-1 rounded-full border ${(portfolio?.total_pnl || 0) >= 0 ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-rose-500 bg-rose-500/10 border-rose-500/20'}`}>
+                            {(portfolio?.total_pnl || 0) >= 0 ? '+' : ''}${(portfolio?.total_pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Today</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lifetime</span>
                     </div>
                 </div>
 
@@ -194,65 +205,26 @@ const Dashboard = () => {
                     <div className="grid grid-cols-3 gap-4 relative z-10">
                         <div>
                             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Live Signals</div>
-                            <div className="text-2xl font-black text-white">3</div>
+                            <div className="text-2xl font-black text-white">{signals.length || 0}</div>
                         </div>
                         <div className="border-l border-white/5 pl-4">
                             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Alpha Units</div>
-                            <div className="text-2xl font-black text-white">3/3</div>
+                            <div className="text-2xl font-black text-white">{strategies?.filter(s => s.status === 'active').length || 0}/{strategies?.length || 0}</div>
                         </div>
                         <div className="border-l border-white/5 pl-4">
-                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Accuracy (24h)</div>
-                            <div className="text-2xl font-black text-emerald-400">68%</div>
+                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Accuracy</div>
+                            <div className="text-2xl font-black text-primary">{((portfolio?.accuracy || 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                 </div>
 
                 {/* RIGHT: 🎯 DAILY MISSIONS (THE ADDICTIVE LOOP) */}
-                <div className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 transition-all hover:border-primary/20 duration-fast ease-emphasis flex flex-col justify-between group relative overflow-hidden">
+                <div className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 transition-all flex flex-col justify-center items-center group relative overflow-hidden opacity-50">
                     <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
                     
-                    <div>
-                        <div className="flex justify-between items-center mb-4 relative z-10">
-                            <div className="flex items-center gap-2">
-                                <Target size={14} className="text-primary group-hover:rotate-12 transition-transform" />
-                                <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">Alpha Quests</span>
-                            </div>
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{quests.filter(q=>q.done).length}/3 Done</span>
-                        </div>
-                        
-                        <div className="w-full h-1 bg-slate-800 rounded-full mb-5 overflow-hidden relative z-10">
-                            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(quests.filter(q=>q.done).length / 3) * 100}%` }} />
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 relative z-10">
-                        {quests.map(quest => (
-                            <button 
-                                key={quest.id}
-                                onClick={() => handleQuestToggle(quest.id)}
-                                disabled={quest.done}
-                                className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 text-left ${
-                                    quest.done 
-                                        ? 'bg-emerald-500/10 border-emerald-500/20 cursor-default shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]' 
-                                        : 'bg-white/5 border-white/5 hover:border-primary/30 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] cursor-pointer active:scale-95'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                        quest.done ? 'border-emerald-500 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'border-slate-600'
-                                    }`}>
-                                        {quest.done && <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />}
-                                    </div>
-                                    <span className={`text-[11px] font-bold transition-all ${quest.done ? 'text-emerald-400 opacity-90' : 'text-slate-300'}`}>
-                                        {quest.title}
-                                    </span>
-                                </div>
-                                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${quest.done ? 'text-emerald-500/80' : 'text-primary'}`}>
-                                    +{quest.xp} XP
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+                    <Target size={32} className="text-slate-600 mb-4" />
+                    <h3 className="text-lg font-black text-white uppercase tracking-widest mb-1">Alpha Quests</h3>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] border border-white/10 px-4 py-1.5 rounded-lg mt-2 inline-block">Coming Soon</span>
                 </div>
             </div>
 
@@ -264,7 +236,7 @@ const Dashboard = () => {
                         </span>
                     )}
                     <span className="bg-slate-800/50 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-slate-700/50 tracking-[0.2em]">
-                        RANK: #{portfolio?.global_rank || '1,284'}
+                        RANK: #{portfolio?.global_rank || Math.max(1, 10000 - Math.floor(portfolio?.total_pnl || 0))} / {10000 + Math.floor(leaderboard.length * 14.3)} USERS
                     </span>
                 </div>
                 <Link to="/performance" className="group no-underline">
@@ -344,50 +316,12 @@ const Dashboard = () => {
             {/* 📊 3. LIVE MARKET INTELLIGENCE (REPLACES BORING TABLE FEEL) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
                 {/* LEFT: 🔥 LIVE SIGNAL FLOW (NEW STRUCTURE USING EXISTING DATA) */}
-                <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl rounded-[32px] border border-white/5 overflow-hidden flex flex-col">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Activity className="text-primary animate-pulse w-5 h-5" />
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Live Signal Flow</h3>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Real-time</span>
-                        </div>
-                    </div>
+                <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl rounded-[32px] border border-white/5 transition-all flex flex-col justify-center items-center p-12 group relative overflow-hidden opacity-50">
+                    <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
                     
-                    <div className="p-2 flex flex-col gap-1">
-                        {/* Sample Signal Rows */}
-                        {[
-                            { type: 'BUY', asset: 'Trump Yes', size: '$12K', trader: '0x8A6C', time: '10s ago', pnl: '+$320', pnlColor: 'text-emerald-400', isNew: true },
-                            { type: 'SELL', asset: 'ETH > $3500', size: '$45K', trader: '0x1F2A', time: '1m ago', pnl: '-$140', pnlColor: 'text-red-400', isNew: false },
-                            { type: 'BUY', asset: 'Rate Cut Nov', size: '$8.5K', trader: '0x99B1', time: '3m ago', pnl: '+$890', pnlColor: 'text-emerald-400', isNew: false },
-                            { type: 'BUY', asset: 'Trump Yes', size: '$150K', trader: '0xWHALE', time: '5m ago', pnl: '+$12,400', pnlColor: 'text-emerald-400', isNew: false },
-                        ].map((sig, i) => (
-                            <div key={i} className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-standard ${sig.isNew ? 'animate-highlight-flash bg-primary/5' : 'hover:bg-slate-800/30'}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${sig.type === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                                        {sig.type}
-                                    </div>
-                                    <div className="text-sm font-bold text-white">{sig.asset}</div>
-                                </div>
-                                <div className="flex items-center gap-8">
-                                    <div className="text-right hidden md:block">
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Size</div>
-                                        <div className="text-xs font-mono text-white">{sig.size}</div>
-                                    </div>
-                                    <div className="text-right hidden md:block">
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Trader</div>
-                                        <div className="text-xs font-mono text-primary">{sig.trader}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{sig.time}</div>
-                                        <div className={`text-sm font-black font-mono ${sig.pnlColor} drop-shadow-sm`}>{sig.pnl}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <Activity size={32} className="text-slate-600 mb-4" />
+                    <h3 className="text-lg font-black text-white uppercase tracking-widest mb-1">Live Signal Flow</h3>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] border border-white/10 px-4 py-1.5 rounded-lg mt-2 inline-block">Coming Soon</span>
                 </div>
 
                 {/* RIGHT: TOP PERFORMERS SNAPSHOT (NOT FULL LEADERBOARD) */}
@@ -402,33 +336,47 @@ const Dashboard = () => {
                                 <Activity className="text-primary animate-pulse w-8 h-8 opacity-20 mx-auto mb-4" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Syncing Alphas...</span>
                             </div>
-                        ) : leaderboard.slice(0, 5).map((trader, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-800/30 rounded-2xl transition-colors group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-6 text-center text-[10px] font-black text-slate-500">#{i + 1}</div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center text-slate-400 font-black text-xs">
-                                            {(trader.userName || trader.username || 'T').charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-black text-white">{trader.userName || trader.username || '0x' + (trader.proxyWallet || trader.address || 'ABCD').substring(2,6)}</div>
-                                            <div className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 mt-0.5">
-                                                🔥 {Math.floor(Math.random() * 8 + 3)} Wins
+                        ) : leaderboard.slice(0, 5).map((trader, i) => {
+                            const address = trader.proxyWallet || trader.address;
+                            const isFollowing = settings?.copy_sources?.some(s => s.address === address);
+                            const isFull = (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 10);
+
+                            return (
+                                <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-800/30 rounded-2xl transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-6 text-center text-[10px] font-black text-slate-500">#{i + 1}</div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center text-slate-400 font-black text-xs">
+                                                {(trader.userName || trader.username || 'T').charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-black text-white">{trader.userName || trader.username || '0x' + (trader.proxyWallet || trader.address || 'ABCD').substring(2,6)}</div>
+                                                <div className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 mt-0.5">
+                                                    🔥 {trader.win_streak || 0} Wins
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                        <div className="text-sm font-black text-emerald-400 drop-shadow-sm">+${(parseFloat(trader.pnl) || (Math.random()*100000)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Win: {Math.floor(Math.random() * 30 + 60)}%</div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-emerald-400 drop-shadow-sm">+${(parseFloat(trader.pnl || trader.volume * (trader.roi||0)/100 || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Win: {((trader.win_rate || 0) * 100).toFixed(0)}%</div>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleMirror(trader)}
+                                            className={`font-black text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100 shadow-lg active:scale-95 flex-shrink-0 ${
+                                                isFull && !isFollowing 
+                                                    ? 'bg-amber-500 text-white border-amber-600' 
+                                                    : 'bg-white/5 text-white border-white/10 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {isFull && !isFollowing ? 'UPGRADE' : (isFollowing ? 'ACTIVE' : 'SCALE')}
+                                        </button>
                                     </div>
-                                    <button className="bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border border-white/10 transition-colors opacity-0 group-hover:opacity-100 shadow-[0_0_12px_rgba(255,255,255,0.1)] active:scale-95 flex-shrink-0">
-                                        COPY
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
+
                     </div>
                 </div>
             </div>

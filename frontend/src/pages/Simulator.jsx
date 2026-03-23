@@ -115,7 +115,7 @@ const StrategySandbox = () => {
         riskMode: 'Balanced'
     });
 
-    const triggerAnalytics = (event) => console.log(`[Analytics] ${event}`, { timestamp: new Date(), user_id: user?.user_id });
+    const triggerAnalytics = (event) => { /* Analytics disabled to reduce console noise */ };
 
     const generateRealisticTrend = (p) => {
         const points = [];
@@ -186,37 +186,21 @@ const StrategySandbox = () => {
     const [signals, setSignals] = useState([]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user?.user_id) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const wsUrl = apiUrl.replace('http', 'ws');
-        const fetchData = () => {
-            fetch(`${apiUrl}/api/signals/?user_id=${user.user_id}`).then(res => res.json()).then(data => setSignals(data.signals || [])).catch(err => console.error(err));
-            refreshPortfolio(); // This also calls refreshStrategies
+        
+        const fetchData = async () => {
+            // refreshPortfolio already updates strategies/pnl etc.
+            if (refreshPortfolio) await refreshPortfolio(); 
         };
+        
+        // Initial fetch only if not already loading elsewhere
         fetchData();
-        let socket = null;
-        let pollInterval = null;
-        const connectWS = () => {
-            try {
-                socket = new WebSocket(`${wsUrl}/api/strategies/ws/${user.user_id}`);
-                socket.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        // If the backend sends strategies via WS, we could update context or just re-trigger refresh
-                        if (data.strategies && refreshStrategies) refreshStrategies();
-                    } catch (err) { console.error("WebSocket Msg Error:", err); }
-                };
-                socket.onopen = () => { if (pollInterval) clearInterval(pollInterval); };
-                socket.onclose = () => { if (!pollInterval) pollInterval = setInterval(fetchData, 10000); };
-                socket.onerror = (err) => { console.error("WebSocket Error:", err); socket.close(); };
-            } catch (err) {
-                console.error("WebSocket init error:", err);
-                if (!pollInterval) pollInterval = setInterval(fetchData, 10000);
-            }
-        };
-        connectWS();
-        return () => { if (socket) socket.close(); if (pollInterval) clearInterval(pollInterval); };
-    }, [user, refreshPortfolio, refreshStrategies]);
+        
+        // Moderate polling to ensure life but save costs/renders
+        const pollInterval = setInterval(fetchData, 60000); // Pulse every minute
+        return () => { clearInterval(pollInterval); };
+    }, [user?.user_id]); // Stable dependency on user ID instead of objects or functions
 
     const [previewData, setPreviewData] = useState({ expected_pnl_7d: 0, win_rate: 0, max_drawdown: 0, confidence_score: 0, recent_signals: [] });
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -273,6 +257,33 @@ const StrategySandbox = () => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         await fetch(`${apiUrl}/api/strategies/${stratId}?user_id=${user.user_id}`, { method: 'DELETE' });
         if (refreshStrategies) await refreshStrategies();
+    };
+
+    const [confirmAction, setConfirmAction] = useState(null);
+    const [tradesModal, setTradesModal] = useState(null);
+
+    const executeConfirmAction = async () => {
+        if (!confirmAction) return;
+        if (confirmAction.type === 'toggle') {
+            await toggleStrategy(confirmAction.strategy.strategy_id, confirmAction.strategy.status || 'inactive');
+        } else if (confirmAction.type === 'delete') {
+            await removeStrategy(confirmAction.strategy.strategy_id);
+        }
+        setConfirmAction(null);
+    };
+
+    const viewTrades = async (strategy) => {
+        setTradesModal({ stratId: strategy.strategy_id, name: strategy.name, loading: true, trades: [] });
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${apiUrl}/api/strategies/${strategy.strategy_id}/trades?user_id=${user?.user_id||user?.userId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setTradesModal({ stratId: strategy.strategy_id, name: strategy.name, loading: false, trades: data.trades || [] });
+            }
+        } catch(err) {
+            setTradesModal({ stratId: strategy.strategy_id, name: strategy.name, loading: false, trades: [] });
+        }
     };
 
     const toggleSourceSelection = (address) => {
@@ -335,6 +346,69 @@ const StrategySandbox = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* ⚡ Operational Alpha Units (Moved to Top) */}
+                {strategies.length > 0 && (
+                    <div className="mb-20">
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="w-1.5 h-6 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Operational <span className="text-primary">Alpha Units</span></h3>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Active Execution Nodes</p>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {strategies.map((s, idx) => (
+                                <div key={idx} onClick={() => viewTrades(s)} className="bg-slate-900/20 backdrop-blur-xl border border-white/5 p-8 rounded-[40px] flex flex-col gap-10 hover:border-primary/30 transition-all group cursor-pointer animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${s.status === 'active' ? 'bg-primary/20 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-white/5 text-slate-600'}`}>
+                                                <Zap size={28} fill={s.status === 'active' ? 'currentColor' : 'none'} className={s.status === 'active' ? 'animate-pulse' : ''} />
+                                            </div>
+                                            <div>
+                                                <div className="text-lg font-black text-white italic tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{s.name}</div>
+                                                <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mt-1">{s.platform} • {s.risk_mode}</div>
+                                            </div>
+                                        </div>
+                                        <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${(s.status || 'inactive') === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-800/10 text-slate-500 border-white/5'}`}>
+                                            {s.status || 'inactive'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                                            <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Current PnL</div>
+                                            <div className={`text-xl font-black tabular-nums transition-all ${parseFloat(s.simulated_pnl || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                ${parseFloat(s.simulated_pnl || 0).toFixed(2)}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                                            <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Allocation</div>
+                                            <div className="text-xl font-black text-white tabular-nums">{s.allocation_percentage || 0}%</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'toggle', strategy: s }); }} 
+                                            className={`flex-1 flex gap-2 items-center justify-center py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${(s.status || 'inactive') === 'active' ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20'}`}
+                                        >
+                                            {(s.status || 'inactive') === 'active' ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                                            {(s.status || 'inactive') === 'active' ? 'Deactivate' : 'Reactuate'}
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'delete', strategy: s }); }} 
+                                            className="w-14 flex items-center justify-center bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* 📊 Hero Stats Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
@@ -656,69 +730,89 @@ const StrategySandbox = () => {
                 </div>
             </div>
 
-            {/* ⚡ Operational Alpha Units */}
-            {strategies.length > 0 && (
-                <div className="mb-20">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="w-1.5 h-6 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
-                        <div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Operational <span className="text-primary">Alpha Units</span></h3>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Active Execution Nodes</p>
-                        </div>
+            </div>
+            
+            {/* Action Modals */}
+            {confirmAction && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+                  <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+                    <h2 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">Confirm Setup</h2>
+                    <p className="text-slate-400 mb-6 text-sm font-medium">
+                        Are you sure you want to {confirmAction.type === 'delete' ? <span className="text-rose-500 font-bold">PERMANENTLY DELETE</span> : (confirmAction.strategy.status === 'active' ? <span className="text-amber-500 font-bold">DEACTIVATE</span> : <span className="text-emerald-500 font-bold">REACTUATE</span>)} the systematic alpha unit "{confirmAction.strategy.name}"?
+                    </p>
+                    <div className="flex justify-end gap-3">
+                      <button 
+                        onClick={() => setConfirmAction(null)} 
+                        className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={executeConfirmAction} 
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-colors ${confirmAction.type === 'delete' ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border-rose-500/20' : 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20'}`}
+                      >
+                        Confirm
+                      </button>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {strategies.map((s, idx) => (
-                            <div key={idx} className="bg-slate-900/20 backdrop-blur-xl border border-white/5 p-8 rounded-[40px] flex flex-col gap-10 hover:border-primary/30 transition-all group animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${s.status === 'active' ? 'bg-primary/20 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-white/5 text-slate-600'}`}>
-                                            <Zap size={28} fill={s.status === 'active' ? 'currentColor' : 'none'} className={s.status === 'active' ? 'animate-pulse' : ''} />
-                                        </div>
-                                        <div>
-                                            <div className="text-lg font-black text-white italic tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{s.name}</div>
-                                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mt-1">{s.platform} • {s.risk_mode}</div>
-                                        </div>
-                                    </div>
-                                    <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${(s.status || 'inactive') === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-800/10 text-slate-500 border-white/5'}`}>
-                                        {s.status || 'inactive'}
-                                    </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
-                                        <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Current PnL</div>
-                                        <div className={`text-xl font-black tabular-nums transition-all ${parseFloat(s.simulated_pnl || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                            ${parseFloat(s.simulated_pnl || 0).toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
-                                        <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Allocation</div>
-                                        <div className="text-xl font-black text-white tabular-nums">{s.allocation_percentage || 0}%</div>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-4">
-                                    <button 
-                                        onClick={() => toggleStrategy(s.strategy_id, s.status || 'inactive')} 
-                                        className={`flex-1 flex gap-2 items-center justify-center py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${(s.status || 'inactive') === 'active' ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-primary text-white hover:bg-primary-hover shadow-lg shadow-primary/20'}`}
-                                    >
-                                        {(s.status || 'inactive') === 'active' ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                                        {(s.status || 'inactive') === 'active' ? 'Deactivate' : 'Reactuate'}
-                                    </button>
-                                    <button 
-                                        onClick={() => removeStrategy(s.strategy_id)} 
-                                        className="w-14 flex items-center justify-center bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                  </div>
                 </div>
             )}
-            </div>
+
+            {tradesModal && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 py-8">
+                  <div className="bg-slate-900 border border-white/10 rounded-[32px] p-8 max-w-2xl w-full h-full max-h-[80vh] shadow-2xl relative flex flex-col">
+                    <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-6">
+                        <div>
+                            <h2 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Prediction Stream</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <Activity size={12} className="animate-pulse" /> {tradesModal.name}
+                            </p>
+                        </div>
+                        <button onClick={() => setTradesModal(null)} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+                        {tradesModal.loading ? (
+                            <div className="flex flex-col items-center justify-center h-full gap-4 text-center opacity-40 py-20">
+                                <Activity size={32} className="text-primary animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Querying Blockchain Predictors...</span>
+                            </div>
+                        ) : tradesModal.trades.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full gap-4 text-center opacity-40 py-20">
+                                <Shield size={32} className="text-slate-600" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">No predictions deployed yet. Awaiting signal.</span>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {tradesModal.trades.map((t, i) => (
+                                    <div key={i} className="p-4 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center justify-between">
+                                        <div className="flex gap-4 items-center">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] ${t.position === 'YES' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                {t.position}
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-black text-white tracking-widest mb-1 truncate max-w-[240px]" title={t.market_id}>
+                                                    {t.market_id && t.market_id.startsWith('0x') ? `${t.market_id.substring(0, 10)}...${t.market_id.substring(t.market_id.length - 4)}` : (t.market_id || 'Polymarket Event')}
+                                                </div>
+                                                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                                    {t.category || 'General'} • {t.created_at ? new Date(t.created_at).toLocaleString() : 'Recent'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-white tabular-nums">${parseFloat(t.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">@ ${(parseFloat(t.price || 0.5)).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                  </div>
+                </div>
+            )}
         </div>
     );
 };

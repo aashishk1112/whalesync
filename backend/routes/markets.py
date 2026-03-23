@@ -42,3 +42,9 @@ def get_market(market_id: str):
         if m["market_id"] == market_id:
             return {"market": m}
     return {"market": None}
+
+@router.get("/ticker/signals")
+def get_ticker_signals():
+    from services.polymarket_service import polymarket_service
+    signals = polymarket_service.get_ticker_signals()
+    return {"signals": signals}

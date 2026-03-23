@@ -41,14 +41,14 @@ const Settings = () => {
         }
 
         // Fetch strategies to check for active ones
-        if (user) {
+        if (user?.user_id) {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`)
+            fetch(`${apiUrl}/api/strategies?user_id=${user.user_id}`)
                 .then(res => res.json())
                 .then(data => setStrategies(data.strategies || []))
                 .catch(err => console.error(err));
         }
-    }, [settings.simulation_capital, user, refreshPortfolio]);
+    }, [settings.simulation_capital, user?.user_id]); // Use ID dependency to prevent loops
 
     // Auto-clear message after 10 seconds
     useEffect(() => {

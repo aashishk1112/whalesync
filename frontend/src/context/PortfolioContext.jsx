@@ -22,7 +22,7 @@ export const PortfolioProvider = ({ children }) => {
         if (!user) return;
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/strategies/?user_id=${user.user_id}`);
+            const res = await fetch(`${apiUrl}/api/strategies?user_id=${user.user_id}`);
             const data = await res.json();
             if (data.strategies) setStrategies(data.strategies);
         } catch (err) {
@@ -34,7 +34,7 @@ export const PortfolioProvider = ({ children }) => {
         if (!user) return;
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/me/?user_id=${user.user_id}`);
+            const res = await fetch(`${apiUrl}/api/portfolio/me?user_id=${user.user_id}`);
             const data = await res.json();
             if (data.portfolio) setPortfolio(data.portfolio);
             if (data.settings) setSettings(data.settings);
@@ -76,7 +76,7 @@ export const PortfolioProvider = ({ children }) => {
     const simulateTrade = async (tradeDetails) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/simulate_trade/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/simulate_trade?user_id=${user.user_id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -97,7 +97,7 @@ export const PortfolioProvider = ({ children }) => {
     const updateCapital = async (capital) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/settings/capital/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/settings/capital?user_id=${user.user_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ capital })
@@ -113,7 +113,7 @@ export const PortfolioProvider = ({ children }) => {
     const addSource = async (source) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/copy-sources/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/copy-sources?user_id=${user.user_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(source)
@@ -166,7 +166,7 @@ export const PortfolioProvider = ({ children }) => {
     const linkPolymarket = async (address, creds = null) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/link-polymarket/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/link-polymarket?user_id=${user.user_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ address, creds })
@@ -183,7 +183,7 @@ export const PortfolioProvider = ({ children }) => {
     const acceptDisclosure = async () => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/accept-disclosure/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/accept-disclosure?user_id=${user.user_id}`, {
                 method: 'POST'
             });
             if (res.ok) {
@@ -197,7 +197,7 @@ export const PortfolioProvider = ({ children }) => {
     const wipeUserData = async () => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${apiUrl}/api/portfolio/wipe-data/?user_id=${user.user_id}`, {
+            const res = await fetch(`${apiUrl}/api/portfolio/wipe-data?user_id=${user.user_id}`, {
                 method: 'DELETE'
             });
             if (res.ok) {
