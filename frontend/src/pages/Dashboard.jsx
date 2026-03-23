@@ -123,13 +123,13 @@ const Dashboard = () => {
                     <span className="font-medium flex-1 text-sm">{notification.message}</span>
 
                     {notification.isLimitError && (
-                        <a
-                            href="/subscription"
-                            onClick={(e) => e.stopPropagation()}
+                        <Link
+                            to="/subscription"
+                            onClick={(e) => { e.stopPropagation(); setNotification(null); }}
                             className="bg-white text-slate-900 px-3 py-1 rounded text-xs font-bold whitespace-nowrap no-underline hover:bg-slate-100 transition-colors"
                         >
                             Upgrade Plan
-                        </a>
+                        </Link>
                     )}
 
                     <button

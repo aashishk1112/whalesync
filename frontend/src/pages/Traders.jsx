@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Award, TrendingUp, Target, Shield, Clock, ExternalLink, ChevronDown, ChevronUp, Zap, Activity, AlertCircle, Sparkles, TrendingDown, ArrowUpRight, ArrowDownRight, Info, Flame, History, DollarSign, Users, Eye, Play, BarChart3, Timer } from 'lucide-react';
 import Sparkline from '../components/Sparkline';
 import RiskMeter from '../components/RiskMeter';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { PortfolioContext } from '../context/PortfolioContext';
 import AlphaTicker from '../components/AlphaTicker';
@@ -23,12 +23,13 @@ function UpgradeModal({ isOpen, onClose }) {
                     You've reached the maximum number of active mirror strategies for your current plan. Upgrade to <span className="text-primary font-bold">Terminal Pro</span> for unlimited source slots and institutional-grade alpha.
                 </p>
                 <div className="flex flex-col gap-4">
-                    <button 
-                        onClick={() => window.location.href = '/subscriptions'}
-                        className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest rounded-2xl hover:bg-transparent hover:text-primary border border-primary transition-all shadow-xl shadow-primary/20"
+                    <Link 
+                        to="/subscription"
+                        className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest rounded-2xl hover:bg-transparent hover:text-primary border border-primary transition-all shadow-xl shadow-primary/20 no-underline text-center"
+                        onClick={onClose}
                     >
                         Unlock Pro Access
-                    </button>
+                    </Link>
                     <button 
                         onClick={onClose}
                         className="w-full py-2 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
