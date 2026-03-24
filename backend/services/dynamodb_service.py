@@ -402,13 +402,13 @@ def list_markets_by_platform(platform: Optional[str] = None) -> List[Dict[str, A
         return response.get("Items", [])
 
 # --- Trades & Portfolio Ops ---
-def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: Optional[str] = None, timestamp: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, amount: float, price: float, category: str = "All", tx_hash: Optional[str] = None, timestamp: Optional[Any] = None, metadata: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     # 1. Update Strategy Balance with hard stop if fully depleted
     try:
         strategies_table.update_item(
             Key={"strategy_id": strategy_id},
             UpdateExpression="SET strategy_balance = strategy_balance - :amt",
-            ConditionExpression="strategy_balance > :amt", # Must be strictly greater to avoid zeroing out
+            ConditionExpression="strategy_balance >= :amt", # Changed to >= to allow exact depletion
             ExpressionAttributeValues={":amt": Decimal(str(amount))}
         )
     except Exception as e:
@@ -437,10 +437,9 @@ def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, 
     if timestamp:
         try:
             if isinstance(timestamp, (int, float)):
-                # If it's a unix timestamp
                 created_at = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).isoformat()
             elif isinstance(timestamp, str):
-                created_at = timestamp # Already iso or formatted
+                created_at = timestamp
         except:
             pass
 
@@ -456,7 +455,8 @@ def record_trade(user_id: str, strategy_id: str, market_id: str, position: str, 
         "category": category,
         "tx_hash": tx_hash,
         "created_at": created_at,
-        "status": "open" # Initial status
+        "metadata": metadata or {}, # Rich metadata for UI
+        "status": "open"
     }
     
     try:

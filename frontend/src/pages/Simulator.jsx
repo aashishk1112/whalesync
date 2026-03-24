@@ -787,23 +787,44 @@ const StrategySandbox = () => {
                         ) : (
                             <div className="space-y-4">
                                 {tradesModal.trades.map((t, i) => (
-                                    <div key={i} className="p-4 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center justify-between">
-                                        <div className="flex gap-4 items-center">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] ${t.position === 'YES' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                {t.position}
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-black text-white tracking-widest mb-1 truncate max-w-[240px]" title={t.market_id}>
-                                                    {t.market_id && t.market_id.startsWith('0x') ? `${t.market_id.substring(0, 10)}...${t.market_id.substring(t.market_id.length - 4)}` : (t.market_id || 'Polymarket Event')}
+                                    <div key={i} className="p-5 bg-slate-950/50 border border-white/5 rounded-3xl flex flex-col gap-4 group hover:border-primary/30 transition-all">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-4 items-center">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs ${t.position === 'YES' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                    {t.position}
                                                 </div>
-                                                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                                                    {t.category || 'General'} • {t.created_at ? new Date(t.created_at).toLocaleString() : 'Recent'}
+                                                <div className="max-w-[400px]">
+                                                    <div className="text-[13px] font-black text-white leading-tight mb-1" title={t.metadata?.question || t.market_id}>
+                                                        {t.metadata?.question || t.market_id || 'Polymarket Event'}
+                                                    </div>
+                                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <span>{t.category || 'General'}</span>
+                                                        <span className="opacity-20">•</span>
+                                                        <span>{t.created_at ? new Date(t.created_at).toLocaleString() : 'Recent'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            {(t.metadata?.polymarket_url || t.metadata?.slug) && (
+                                                <a 
+                                                    href={t.metadata?.polymarket_url || `https://polymarket.com/event/${t.metadata?.slug}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-2 text-[8px] font-black uppercase tracking-tighter"
+                                                >
+                                                    <Globe size={12} />
+                                                    LINK
+                                                </a>
+                                            )}
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-sm font-black text-white tabular-nums">${parseFloat(t.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">@ ${(parseFloat(t.price || 0.5)).toFixed(2)}</div>
+                                        <div className="flex justify-between items-center py-3 px-4 bg-white/2 rounded-2xl border border-white/5">
+                                            <div className="flex flex-col">
+                                                <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Simulated Size</span>
+                                                <span className="text-sm font-black text-white tabular-nums">${parseFloat(t.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                            </div>
+                                            <div className="text-right flex flex-col">
+                                                <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Execution Price</span>
+                                                <span className="text-sm font-black text-primary tabular-nums">@ {(parseFloat(t.price || 0.5)).toFixed(2)}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

@@ -67,18 +67,38 @@ def get_strategies(user_id: str):
                         market_id = rt.get("conditionId") or rt.get("slug")
                         
                         if tx_hash and tx_hash not in existing_tx_hashes:
-                            # Verify category match for mirroring
+                            # 1. Timing Protection (Safety Buffer: Only allow trades after strategy was created)
                             trade_allowed = False
-                            strategy_category = s.get("category", "All")
+                            strat_created_at_str = s.get("created_at")
+                            trade_time_raw = rt.get("timestamp")
                             
-                            if strategy_category == "All":
+                            try:
+                                from dateutil.parser import parse as parse_date
+                                from datetime import datetime, timezone
+                                strat_dt = parse_date(strat_created_at_str)
+                                
+                                if isinstance(trade_time_raw, (int, float)):
+                                    trade_dt = datetime.fromtimestamp(float(trade_time_raw), tz=timezone.utc)
+                                else:
+                                    trade_dt = parse_date(str(trade_time_raw))
+                                    if not trade_dt.tzinfo:
+                                        trade_dt = trade_dt.replace(tzinfo=timezone.utc)
+                                
+                                # Compare trade time to strategy creation time
+                                if trade_dt > strat_dt:
+                                    # 2. Verify Category Match
+                                    strategy_category = s.get("category", "All")
+                                    if strategy_category == "All":
+                                        trade_allowed = True
+                                    else:
+                                        market_details = polymarket_service.get_market_details(market_id)
+                                        market_cat = market_details.get("category", "")
+                                        if market_cat.lower() == strategy_category.lower():
+                                            trade_allowed = True
+                            except Exception as te:
+                                # Fallback so we don't break sync if timestamps are weird, but log it
+                                print(f"Mirror filter error: {te}")
                                 trade_allowed = True
-                            else:
-                                # Need to fetch market details to check category
-                                market_details = polymarket_service.get_market_details(market_id)
-                                market_cat = market_details.get("category", "")
-                                if market_cat.lower() == strategy_category.lower():
-                                    trade_allowed = True
                             
                             if trade_allowed:
                                 # Calculate trade amount based on strategy-specific bet size
@@ -93,8 +113,11 @@ def get_strategies(user_id: str):
                                 if risk_mode == "Conservative": trade_amount *= 0.5
                                 elif risk_mode == "Aggressive": trade_amount *= 1.5
 
-                                # Hard Stop
+                                # Hard Stop if balance is too low
                                 if trade_amount > strategy_balance:
+                                    print(f"Strategy {s['strategy_id']} depleted. Stopping.")
+                                    update_strategy_status(s["strategy_id"], "stopped")
+                                    s["status"] = "stopped"
                                     continue
 
                                 # Mirror this trade into our simulator
@@ -106,13 +129,18 @@ def get_strategies(user_id: str):
                                 new_trade = record_trade(
                                     user_id=user_id,
                                     strategy_id=s["strategy_id"],
-                                    market_id=market_label, # Use cleaner label
+                                    market_id=market_label,
                                     position="YES" if side == "BUY" else "NO",
                                     price=float(rt.get("price", 0.5)),
                                     amount=trade_amount,
                                     category=s.get("category", "All"),
                                     tx_hash=tx_hash,
-                                    timestamp=rt.get("timestamp") # Pass real Polymarket time
+                                    timestamp=rt.get("timestamp"),
+                                    metadata={
+                                        "question": rt.get("proxyTitle"),
+                                        "slug": rt.get("slug"),
+                                        "polymarket_url": f"https://polymarket.com/event/{rt.get('slug')}" if rt.get('slug') else None
+                                    }
                                 )
                                 if new_trade:
                                     strategy_trades.append(new_trade)

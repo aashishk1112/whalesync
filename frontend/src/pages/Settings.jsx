@@ -15,6 +15,7 @@ const Settings = () => {
     const [showDisclosure, setShowDisclosure] = useState(false);
     const [newSource, setNewSource] = useState({ platform: 'Polymarket', address: '', name: '' });
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
     const [strategies, setStrategies] = useState([]);
     const { user } = useContext(AuthContext);
@@ -503,22 +504,58 @@ const Settings = () => {
                                 </p>
                             </div>
                             <button 
-                                onClick={async () => {
-                                    if (window.confirm("CRITICAL: Are you sure you want to wipe all your data? This will delete your profile, all strategies, and all trades permanently.")) {
-                                        const res = await wipeUserData();
-                                        if (res.success) {
-                                            alert("Your data has been wiped successfully. You will now be logged out.");
-                                            logout();
-                                        } else {
-                                            setMessage({ type: 'error', text: 'Failed to wipe data. Please try again later.' });
-                                        }
-                                    }
-                                }}
+                                onClick={() => setShowWipeConfirm(true)}
                                 className="btn-outline" 
                                 style={{ width: '100%', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.75rem' }}
                             >
                                 Wipe My Data & Logout
                             </button>
+
+                            {showWipeConfirm && (
+                                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-xl px-4 animate-in fade-in duration-300">
+                                    <div className="bg-slate-900 border border-rose-500/20 rounded-[32px] p-10 max-w-lg w-full shadow-[0_0_100px_rgba(239,68,68,0.15)] relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <ShieldCheck size={160} className="text-rose-500" />
+                                        </div>
+                                        
+                                        <div className="flex flex-col items-center text-center relative z-10">
+                                            <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-8 glow-pulse">
+                                                <X size={40} />
+                                            </div>
+                                            
+                                            <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">System Sanitization</h2>
+                                            <p className="text-[11px] font-black text-rose-500 uppercase tracking-[0.3em] mb-6">Critical Security Action</p>
+                                            
+                                            <p className="text-sm text-slate-400 font-medium leading-relaxed mb-10">
+                                                You are about to initiate a full system wipe. This will <span className="text-white font-bold">PERMANENTLY DELETE</span> your profile, all simulation strategies, encrypted trade history, and neural links. This action is irreversible and follows strict "Right to be Forgotten" protocols.
+                                            </p>
+                                            
+                                            <div className="flex flex-col w-full gap-4">
+                                                <button 
+                                                    onClick={async () => {
+                                                        const res = await wipeUserData();
+                                                        if (res.success) {
+                                                            logout();
+                                                        } else {
+                                                            setMessage({ type: 'error', text: 'Critical: Failed to wipe data. System error.' });
+                                                            setShowWipeConfirm(false);
+                                                        }
+                                                    }}
+                                                    className="w-full py-4 bg-rose-500 text-white hover:bg-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-rose-500/20"
+                                                >
+                                                    Confirm Full Wipe
+                                                </button>
+                                                <button 
+                                                    onClick={() => setShowWipeConfirm(false)} 
+                                                    className="w-full py-4 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                                                >
+                                                    Abort Protocol
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
