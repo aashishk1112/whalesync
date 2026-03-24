@@ -38,7 +38,7 @@ const ProtectedRoute = ({ children }) => {
       </div>
     </div>
   );
-  if (!user) return <Login />;
+  if (!user) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
   const { user, logout } = React.useContext(AuthContext);
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
-  // Don't show header if no user (on login page)
+  // Still support layout for authenticated pages
   if (!user) return <main className="overflow-hidden">{children}</main>;
 
   return (
@@ -54,11 +54,11 @@ const Layout = ({ children }) => {
       <header className="app-header border-b border-white/10 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 py-4">
         <div className="app-container flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <Link to="/" className="no-underline">
+            <Link to="/dashboard" className="no-underline">
               <h1 className="m-0 text-xl font-black text-primary hover:text-primary-hover transition-colors tracking-tighter">WhaleSync</h1>
             </Link>
             <nav className="flex items-center gap-6">
-              <Link to="/" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
+              <Link to="/dashboard" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
               <Link to="/traders" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
               <Link to="/performance" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Performance</Link>
               <Link to="/simulator" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Simulator</Link>
@@ -143,16 +143,21 @@ function App() {
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
-              {/* Login rendered directly at / via ProtectedRoute */}
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              {/* Landing Page (Welcome) always at root */}
+              <Route path="/" element={<Login />} />
+              
+              {/* Dashboard and other app pages moved or guarded */}
+              <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
               <Route path="/traders" element={<ProtectedRoute><Layout><Traders /></Layout></ProtectedRoute>} />
               <Route path="/performance" element={<ProtectedRoute><Layout><PerformanceDashboard /></Layout></ProtectedRoute>} />
               <Route path="/simulator" element={<ProtectedRoute><Layout><Simulator /></Layout></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><Layout><SubscriptionPage /></Layout></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+              
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/docs" element={<Docs />} />
+              
               {/* Fallback to root */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

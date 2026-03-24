@@ -8,7 +8,7 @@ import AlphaTicker from '../components/AlphaTicker';
 
 const Login = () => {
     const [error, setError] = useState('');
-    const { login } = useContext(AuthContext);
+    const { user, login } = useContext(AuthContext);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -18,7 +18,7 @@ const Login = () => {
         const ref = params.get('ref');
         const result = await login(credentialResponse.credential, ref);
         if (result.success) {
-            navigate('/');
+            navigate('/dashboard');
         } else {
             setError(result.error || 'Google login failed.');
         }
@@ -75,8 +75,12 @@ const Login = () => {
                                     <Shield size={32} />
                                 </div>
 
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Initialize Link</h2>
-                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-10">Verification Protocol Required</p>
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">
+                                    {user ? 'Link Active' : 'Initialize Link'}
+                                </h2>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-10">
+                                    {user ? `Authenticated as ${user.username}` : 'Verification Protocol Required'}
+                                </p>
                                 
                                 {error && (
                                     <div className="w-full mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
@@ -86,15 +90,24 @@ const Login = () => {
                                 )}
 
                                 <div className="w-full flex justify-center py-2 relative">
-                                    <GoogleLogin
-                                        onSuccess={handleGoogleSuccess}
-                                        onError={() => setError('Login Failed')}
-                                        theme="filled_black"
-                                        shape="pill"
-                                        text="continue_with"
-                                        size="large"
-                                        width="100%"
-                                    />
+                                    {user ? (
+                                        <button 
+                                            onClick={() => navigate('/dashboard')}
+                                            className="w-full py-4 bg-primary text-white text-xs font-black uppercase tracking-[0.2em] rounded-full hover:bg-primary-hover shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all animate-pulse"
+                                        >
+                                            Enter Terminal
+                                        </button>
+                                    ) : (
+                                        <GoogleLogin
+                                            onSuccess={handleGoogleSuccess}
+                                            onError={() => setError('Login Failed')}
+                                            theme="filled_black"
+                                            shape="pill"
+                                            text="continue_with"
+                                            size="large"
+                                            width="100%"
+                                        />
+                                    )}
                                     {/* Subpixel effect for premium feel */}
                                     <div className="absolute inset-0 pointer-events-none bg-primary/5 rounded-full blur-sm -z-10" />
                                 </div>
