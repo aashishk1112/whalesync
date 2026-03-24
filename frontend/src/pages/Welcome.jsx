@@ -90,6 +90,12 @@ const Welcome = () => {
             <main className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
                 <div className="max-w-5xl w-full flex flex-col items-center text-center">
                     
+                    {/* Stealth Entry Indicator */}
+                    <div className="inline-flex items-center gap-2.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full mb-12 animate-fade-in shadow-2xl backdrop-blur-md">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping" />
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Institutional Terminal • Secure Gate 0-1</span>
+                    </div>
+
                     {/* CENTER: Hero Title */}
                     <div className="mb-14 animate-in fade-in duration-1000">
                         <h1 className="text-6xl md:text-[110px] font-black text-white italic tracking-tighter leading-[0.8] uppercase flex flex-col items-center">
@@ -179,6 +185,28 @@ const Welcome = () => {
                                         width="100%"
                                     />
                                 )}
+                            </div>
+
+                            {/* Encryption Status Feature */}
+                            <div className="mt-8 flex flex-col gap-4 w-full">
+                                <div className="flex items-center gap-4 text-slate-600">
+                                    <div className="h-px flex-1 bg-white/5" />
+                                    <span className="text-[7px] font-black uppercase tracking-[0.3em]">Encryption Status</span>
+                                    <div className="h-px flex-1 bg-white/5" />
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { icon: <Lock size={12} />, label: "SSL" },
+                                        { icon: <Cpu size={12} />, label: "AES" },
+                                        { icon: <Globe size={12} />, label: "W3" }
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex flex-col items-center gap-1 p-2 bg-white/[0.02] border border-white/5 rounded-xl">
+                                            <div className="text-cyan-500/50 group-hover:text-cyan-400 transition-colors">{item.icon}</div>
+                                            <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">{item.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Social Proof Section */}
