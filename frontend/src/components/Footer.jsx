@@ -12,9 +12,9 @@ const Footer = () => {
                     <span>&copy; 2026</span>
                 </div>
                 <div className="flex gap-8">
-                    <Link to="/privacy" className="hover-text-primary">Privacy Policy</Link>
-                    <Link to="/terms" className="hover-text-primary">Terms of Service</Link>
-                    <Link to="/docs" className="hover-text-primary">Documentation</Link>
+                    <Link to="/privacy" className="hover-text-primary cursor-pointer no-underline">Privacy Policy</Link>
+                    <Link to="/terms" className="hover-text-primary cursor-pointer no-underline">Terms of Service</Link>
+                    <Link to="/docs" className="hover-text-primary cursor-pointer no-underline">Documentation</Link>
                 </div>
             </div>
         </footer>

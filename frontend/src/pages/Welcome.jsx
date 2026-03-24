@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Zap, Shield, Sparkles, Activity, Lock, Globe, Cpu, Users, ChevronRight } from 'lucide-react';
 
 import AlphaTicker from '../components/AlphaTicker';
@@ -228,9 +228,9 @@ const Welcome = () => {
                     <div className="h-2 w-2 rounded-full bg-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
                 </div>
                 <div className="flex gap-12">
-                    <a href="/terms" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors">Neural Terms</a>
-                    <a href="/privacy" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors">Privacy Privacy</a>
-                    <a href="/docs" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors">Documentation</a>
+                    <Link to="/terms" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors cursor-pointer">Neural Terms</Link>
+                    <Link to="/privacy" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors cursor-pointer">Privacy Policy</Link>
+                    <Link to="/docs" className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] no-underline hover:text-cyan-400 transition-colors cursor-pointer">Documentation</Link>
                 </div>
             </footer>
         </div>
