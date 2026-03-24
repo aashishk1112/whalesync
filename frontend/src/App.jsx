@@ -6,6 +6,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import { PortfolioProvider } from './context/PortfolioContext';
 
 import Login from './pages/Login';
+import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import Traders from './pages/Traders';
 import Simulator from './pages/Simulator';
@@ -144,7 +145,7 @@ function App() {
             <ScrollToTop />
             <Routes>
               {/* Landing Page (Welcome) always at root */}
-              <Route path="/" element={<Login />} />
+              <Route path="/" element={<Welcome />} />
               
               {/* Dashboard and other app pages moved or guarded */}
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
