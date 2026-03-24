@@ -7,9 +7,9 @@ const AlphaTicker = ({ variant = 'default' }) => {
     const isLoggedIn = !!user;
     const [opportunities, setOpportunities] = useState([]);
 
-    if (!isLoggedIn) return null;
-
     useEffect(() => {
+        if (!isLoggedIn) return; // Guard inside the effect if necessary
+        
         const fetchSignals = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -27,7 +27,7 @@ const AlphaTicker = ({ variant = 'default' }) => {
         // Refresh every 5 minutes
         const interval = setInterval(fetchSignals, 300000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isLoggedIn]); // Added isLoggedIn dependency
 
     const handleTickerClick = (e, url) => {
         if (!isLoggedIn) {
@@ -38,6 +38,8 @@ const AlphaTicker = ({ variant = 'default' }) => {
 
     // Uses live opportunities only, no static fallback
     const tickerItems = opportunities.length > 0 ? opportunities : [{ label: "Awaiting Live Signals...", amount: "SYNCING", time: "live", type: "SYSTEM", url: "#" }];
+
+    if (!isLoggedIn) return null;
 
     if (variant === 'mini') {
         return (
