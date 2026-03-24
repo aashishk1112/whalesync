@@ -30,8 +30,15 @@ const ScrollToTop = () => {
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = React.useContext(AuthContext);
-  if (loading) return <div className="container mt-4 text-center">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (loading) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Activity className="text-primary animate-pulse" size={48} />
+        <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Initializing Neural Link...</span>
+      </div>
+    </div>
+  );
+  if (!user) return <Login />;
   return children;
 };
 
@@ -39,58 +46,57 @@ const Layout = ({ children }) => {
   const { user, logout } = React.useContext(AuthContext);
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
+  // Don't show header if no user (on login page)
+  if (!user) return <main className="overflow-hidden">{children}</main>;
+
   return (
     <>
       <header className="app-header border-b border-white/10 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 py-4">
         <div className="app-container flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <Link to={user ? "/" : "/login"} className="no-underline">
+            <Link to="/" className="no-underline">
               <h1 className="m-0 text-xl font-black text-primary hover:text-primary-hover transition-colors tracking-tighter">WhaleSync</h1>
             </Link>
-            {user && (
-              <nav className="flex items-center gap-6">
-                <Link to="/" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
-                <Link to="/traders" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
-                <Link to="/performance" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Performance</Link>
-                <Link to="/simulator" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Simulator</Link>
-                <Link to="/subscription" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Subscription</Link>
-                <Link to="/settings" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Settings</Link>
-              </nav>
-            )}
+            <nav className="flex items-center gap-6">
+              <Link to="/" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
+              <Link to="/traders" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
+              <Link to="/performance" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Performance</Link>
+              <Link to="/simulator" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Simulator</Link>
+              <Link to="/subscription" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Subscription</Link>
+              <Link to="/settings" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Settings</Link>
+            </nav>
           </div>
           <div>
-            {user && (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  {user.picture_url && (
-                    <img
-                      src={user.picture_url}
-                      alt=""
-                      className="w-8 h-8 rounded-full border border-white/10"
-                    />
-                  )}
-                  <span className="text-xs font-bold text-white uppercase tracking-widest">{user.username}</span>
-                </div>
-                <button
-                  id="logout-button"
-                  style={{
-                    position: 'relative',
-                    zIndex: 9999,
-                    pointerEvents: 'auto',
-                    cursor: 'pointer',
-                    display: 'flex'
-                  }}
-                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase border border-red-500/20 transition-all"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowLogoutModal(true);
-                  }}
-                >
-                  Logout
-                </button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                {user.picture_url && (
+                  <img
+                    src={user.picture_url}
+                    alt=""
+                    className="w-8 h-8 rounded-full border border-white/10"
+                  />
+                )}
+                <span className="text-xs font-bold text-white uppercase tracking-widest">{user.username}</span>
               </div>
-            )}
+              <button
+                id="logout-button"
+                style={{
+                  position: 'relative',
+                  zIndex: 9999,
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  display: 'flex'
+                }}
+                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase border border-red-500/20 transition-all"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLogoutModal(true);
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -110,7 +116,7 @@ const Layout = ({ children }) => {
               <button 
                 onClick={() => { 
                   logout(); 
-                  window.location.href = '/login'; 
+                  window.location.href = '/'; 
                 }} 
                 className="px-4 py-2 rounded-xl text-sm font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
               >
@@ -136,20 +142,20 @@ function App() {
         <PortfolioProvider>
           <BrowserRouter>
             <ScrollToTop />
-            <Layout>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/traders" element={<ProtectedRoute><Traders /></ProtectedRoute>} />
-                <Route path="/performance" element={<ProtectedRoute><PerformanceDashboard /></ProtectedRoute>} />
-                <Route path="/simulator" element={<ProtectedRoute><Simulator /></ProtectedRoute>} />
-                <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/docs" element={<Docs />} />
-              </Routes>
-            </Layout>
+            <Routes>
+              {/* Login rendered directly at / via ProtectedRoute */}
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/traders" element={<ProtectedRoute><Layout><Traders /></Layout></ProtectedRoute>} />
+              <Route path="/performance" element={<ProtectedRoute><Layout><PerformanceDashboard /></Layout></ProtectedRoute>} />
+              <Route path="/simulator" element={<ProtectedRoute><Layout><Simulator /></Layout></ProtectedRoute>} />
+              <Route path="/subscription" element={<ProtectedRoute><Layout><SubscriptionPage /></Layout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/docs" element={<Docs />} />
+              {/* Fallback to root */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </BrowserRouter>
         </PortfolioProvider>
       </AuthProvider>

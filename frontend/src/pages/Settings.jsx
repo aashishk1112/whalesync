@@ -272,7 +272,7 @@ const Settings = () => {
                             className="btn-outline" 
                             style={{ width: '100%', fontSize: '0.85rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }}
                             onClick={() => {
-                                const link = `${window.location.origin}/login?ref=${user?.referral_code}`;
+                                const link = `${window.location.origin}/?ref=${user?.referral_code}`;
                                 navigator.clipboard.writeText(link);
                                 setMessage({ type: 'success', text: 'Referral link copied to clipboard!' });
                             }}
