@@ -91,6 +91,8 @@ const DesignSystemStyles = () => (
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 255, 198, 0.2); border-radius: 2px; }
+
+        body { overflow-x: hidden !important; width: 100%; position: relative; }
     `}} />
 );
 
@@ -104,11 +106,23 @@ const TopInsightBar = ({ topTrader, volume, winRate, strategy }) => (
             {/* Soft Glow Background Animation */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 animate-pulse" />
             
-            <div className="flex items-center gap-10 whitespace-nowrap animate-in fade-in slide-in-from-top-4 duration-700">
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-6 md:gap-10 whitespace-nowrap animate-in fade-in slide-in-from-top-4 duration-700 overflow-hidden">
+                <div className="flex items-center gap-2 relative z-10 group shrink-0">
                     <Award size={14} className="text-term-warning" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Top Trader Today:</span>
-                    <span className="text-[10px] font-black text-white uppercase italic">{topTrader?.name || '---'}</span>
+                    {topTrader?.address ? (
+                        <a 
+                            href={`https://polymarket.com/profile/${topTrader.address}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-black text-white uppercase italic hover:text-term-primary transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                            {topTrader.name || '---'}
+                            <ExternalLink size={10} className="text-slate-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                    ) : (
+                        <span className="text-[10px] font-black text-white uppercase italic">{topTrader?.name || '---'}</span>
+                    )}
                     <span className="text-[10px] font-black text-term-success tabular-nums">+{topTrader?.roi || '0.0'}%</span>
                 </div>
                 
@@ -149,7 +163,7 @@ const TopInsightBar = ({ topTrader, volume, winRate, strategy }) => (
     </div>
 );
 
-const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, onUpgrade, isFollowing }) => {
+const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, onUpgrade, isFollowing, isWatched, onWatch }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const movement = Math.floor(Math.random() * 5) - 2; // Simulated
     const score = Math.round(trader.whale_score || 0);
@@ -184,7 +198,7 @@ const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, on
                     )}
                     
                     {/* 1. RANK & MOVEMENT */}
-                    <div className="w-20 shrink-0 flex flex-col items-center justify-center border-r border-white/5 pr-4">
+                    <div className="w-12 md:w-16 shrink-0 flex flex-col items-center justify-center border-r border-white/5 pr-4">
                         <span className={`text-xl font-black leading-none mb-1 ${isTopThree ? 'text-white' : 'text-slate-700'}`}>{trader.rank || idx + 1}</span>
                         <div className={`flex items-center gap-0.5 text-[8px] font-black ${movement >= 0 ? 'text-emerald-500' : 'text-term-danger'}`}>
                             {movement >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -203,10 +217,12 @@ const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, on
                                 )}
                             </div>
                         </div>
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 min-w-0">
                             <div className="flex items-center gap-2">
-                                <span className={`text-sm font-black uppercase tracking-tight ${isTopThree ? 'text-white' : 'text-slate-300'}`}>{trader.username || 'Anonymous Whale'}</span>
-                                {isTopThree && <Shield size={12} className="text-term-primary fill-term-primary/10" />}
+                                <span className={`text-sm font-black uppercase tracking-tight truncate max-w-[140px] md:max-w-[220px] ${isTopThree ? 'text-white' : 'text-slate-300'}`}>
+                                    {trader.username || 'Anonymous Whale'}
+                                </span>
+                                {isTopThree && <Shield size={12} className="text-term-primary fill-term-primary/10 shrink-0" />}
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                                 {['🐋 Whale', '⚡ Scalper'].map((tag, i) => (
@@ -217,57 +233,48 @@ const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, on
                     </div>
 
                     {/* 3. PRIMARY METRIC: WHALESCORE */}
-                    <div className="w-32 shrink-0 flex flex-col items-center border-x border-white/5 px-4">
-                        <div className={`text-5xl font-black score-pulse tabular-nums tracking-tighter ${getScoreColor(score)}`}>
+                    <div className="w-20 md:w-24 shrink-0 flex flex-col items-center border-x border-white/5 px-2">
+                        <div className={`text-2xl md:text-4xl font-black score-pulse tabular-nums tracking-tighter ${getScoreColor(score)}`}>
                             {score}
                         </div>
-                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.3em] mt-1">WhaleScore</span>
+                        <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest mt-1">Score</span>
                     </div>
 
-                    {/* 4. PERFORMANCE LINE */}
-                    <div className="flex-1 px-8 hidden md:flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Performance Matrix</span>
-                            <span className="text-[10px] font-black text-white tabular-nums">Win {(trader.win_rate * 100).toFixed(0)}%</span>
+                    {/* 4. CONSOLIDATED PERFORMANCE MATRIX */}
+                    <div className="flex-1 px-4 md:px-8 hidden 2xl:flex flex-col gap-2 min-w-[400px]">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Execution Matrix</span>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-5">
                             <div className="flex flex-col">
-                                <span className="text-xs font-black text-slate-300 tabular-nums">{trader.total_trades || Math.floor(Math.random() * 500) + 50}</span>
+                                <span className="text-xs font-black text-white tabular-nums">{trader.total_trades || 124}</span>
                                 <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">TRADES</span>
                             </div>
-                            <div className="h-6 w-px bg-white/5" />
+                            <div className="h-6 w-px bg-white/10" />
                             <div className="flex flex-col">
-                                <span className="text-xs font-black text-term-success tabular-nums">+$14.2K</span>
-                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">TOTAL PNL</span>
+                                <span className="text-xs font-black text-term-success tabular-nums">+$14.2K <TrendingUp size={10} className="inline ml-1" /></span>
+                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">PNL VECTOR</span>
+                            </div>
+                            <div className="h-6 w-px bg-white/10" />
+                            <div className="flex flex-col">
+                                <span className="text-xs font-black text-white tabular-nums">{(trader.win_rate * 100).toFixed(0)}%</span>
+                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">WIN RATE</span>
+                            </div>
+                            <div className="h-6 w-px bg-white/10" />
+                            <div className="flex flex-col">
+                                <span className={`text-[10px] font-black ${risk.text} uppercase`}>{risk.label}</span>
+                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">RISK PROFILE</span>
+                            </div>
+                            <div className="h-6 w-px bg-white/10" />
+                            <div className="flex flex-col">
+                                <span className="text-xs font-black text-term-primary tabular-nums">94%</span>
+                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">CONFIDENCE</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* 5. RISK & TREND */}
-                    <div className="w-48 shrink-0 flex items-center px-6 gap-6 border-l border-white/5">
-                        <div className="flex flex-col gap-1.5 flex-1">
-                            <div className="flex justify-between items-center text-[8px] font-black tracking-widest">
-                                <span className="text-slate-600 uppercase">Risk Profile</span>
-                                <span className={risk.text}>{risk.label}</span>
-                            </div>
-                            <div className="risk-bar w-full">
-                                <div className={`risk-bar-fill ${risk.color}`} style={{ width: `${trader.risk_score || 45}%` }} />
-                            </div>
-                        </div>
-                        <div className="shrink-0 group/spark">
-                            <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1 text-right">Trend</div>
-                            <div className="sparkline-animate">
-                                <Sparkline data={[10, 22, 15, 28, 22, 35, 30]} width={60} height={20} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 6. SIGNAL & ACTIONS */}
-                    <div className="w-56 shrink-0 flex items-center gap-4 pl-6 pr-2">
-                        <div className="flex-1 bg-term-primary/5 border border-term-primary/10 rounded-xl p-2 text-center group-hover:border-term-primary/30 transition-all">
-                           <div className="text-[10px] font-black text-term-primary tabular-nums tracking-tighter">+12.4% <span className="text-[7px] text-slate-500">(7d)</span></div>
-                           <div className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-0.5">Confidence: 94%</div>
-                        </div>
+                    {/* 6. ACTIONS */}
+                    <div className="w-40 md:w-48 shrink-0 flex items-center justify-end gap-2 md:gap-4 pl-4 md:pl-6 pr-2">
                         <div className="flex flex-col gap-1.5">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); isFull && !isFollowing ? onUpgrade() : onMirror(trader); }}
@@ -276,10 +283,14 @@ const TraderCardRow = ({ trader, idx, isSelected, onSelect, onMirror, isFull, on
                                 {isFollowing ? 'SYNCING' : 'COPY'} <ArrowUpRight size={12} />
                             </button>
                             <button 
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-4 py-2 border border-white/10 rounded-lg text-slate-500 text-[9px] font-black uppercase tracking-widest hover:border-white/20 hover:text-white transition-all"
+                                onClick={(e) => { e.stopPropagation(); onWatch(trader); }}
+                                className={`px-4 py-2 border rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                    isWatched 
+                                        ? 'bg-term-primary/10 border-term-primary text-term-primary shadow-[0_0_15px_rgba(0,255,198,0.2)]' 
+                                        : 'border-white/10 text-slate-500 hover:border-white/20 hover:text-white'
+                                }`}
                             >
-                                <Star size={10} className="inline mr-1" /> WATCH
+                                <Star size={10} className={`inline mr-1 ${isWatched ? 'fill-term-primary' : ''}`} /> {isWatched ? 'WATCHING' : 'WATCH'}
                             </button>
                         </div>
                     </div>
@@ -359,7 +370,19 @@ const TraderDetailPanel = ({ trader, onMirror, isFollowing, isFull, onUpgrade })
                          )}
                     </div>
                     <div className="flex flex-col gap-2">
-                        <div className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">{trader.username || 'Anonymous Whale'}</div>
+                        {trader.address ? (
+                            <a 
+                                href={`https://polymarket.com/profile/${trader.address}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none hover:text-term-primary transition-colors no-underline flex items-center gap-2 group/title"
+                            >
+                                {trader.username || 'Anonymous Whale'}
+                                <ExternalLink size={16} className="text-slate-500 opacity-0 group-hover/title:opacity-100 transition-opacity" />
+                            </a>
+                        ) : (
+                            <div className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">{trader.username || 'Anonymous Whale'}</div>
+                        )}
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-term-primary/10 border border-term-primary/20 rounded-lg">
                                 <Zap size={10} className="text-term-primary" />
@@ -373,20 +396,45 @@ const TraderDetailPanel = ({ trader, onMirror, isFollowing, isFull, onUpgrade })
                     </div>
                 </div>
 
-                <div className="flex gap-2 p-1.5 bg-slate-950/80 rounded-2xl border border-white/5 shadow-inner">
+                <div className="flex gap-2 p-1.5 bg-slate-950/80 rounded-2xl border border-white/5 shadow-inner mb-6">
                     {['DNA', 'SIM', 'INTEL'].map(tab => (
                         <button 
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
                                 activeTab === tab 
-                                    ? 'bg-term-primary text-slate-950 shadow-[0_0_20px_rgba(0,255,198,0.4)]' 
+                                    ? 'bg-[#00FFC6] text-[#061018] shadow-[0_0_20px_rgba(0,255,198,0.4)]' 
                                     : 'text-slate-600 hover:text-white hover:bg-white/5'
                             }`}
                         >
                             {tab}
                         </button>
                     ))}
+                </div>
+
+                {/* SOCIAL PROOF & CTA (Moved to Top) */}
+                <div className="p-4 bg-slate-950/30 rounded-[24px] border border-white/5 mb-6">
+                    <button 
+                        onClick={() => isFull && !isFollowing ? onUpgrade() : onMirror(trader)}
+                        className="w-full btn-neon py-5 rounded-[20px] flex flex-col items-center justify-center gap-1 group/cta"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Zap size={18} className="text-slate-950 fill-slate-950 group-hover:scale-110 transition-transform" />
+                            <span className="text-base font-black text-slate-950 uppercase tracking-[0.2em]">
+                                {isFull && !isFollowing ? 'UPGRADE' : (isFollowing ? 'SYNC ACTIVE' : 'START COPYING')}
+                            </span>
+                        </div>
+                    </button>
+                    <div className="flex items-center justify-between mt-4 px-2">
+                        <div className="flex -space-x-2">
+                            {[1,2,3].map(i => (
+                                <div key={i} className="w-6 h-6 rounded-full border border-slate-950 bg-slate-800 flex items-center justify-center text-[7px] font-black text-slate-500">
+                                    {String.fromCharCode(64 + i)}
+                                </div>
+                            ))}
+                        </div>
+                        <span className="text-[9px] font-black text-term-success uppercase tracking-widest">120 Successful Mirrors Today</span>
+                    </div>
                 </div>
             </div>
 
@@ -448,55 +496,42 @@ const TraderDetailPanel = ({ trader, onMirror, isFollowing, isFull, onUpgrade })
                         </div>
                     </div>
                 )}
-                
-                {activeTab === 'SIM' && (
-                    <div className="flex flex-col items-center justify-center p-12 text-center opacity-30 gap-4">
-                        <Timer size={40} className="text-term-secondary animate-pulse" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Simulation Engine Synchronizing...</span>
-                    </div>
-                )}
-
-                {activeTab === 'INTEL' && (
-                    <div className="flex flex-col items-center justify-center p-12 text-center opacity-30 gap-4">
-                        <Activity size={40} className="text-term-danger animate-pulse" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Live Intel Stream Inactive</span>
-                    </div>
-                )}
-            </div>
-
-            {/* SOCIAL PROOF & CTA */}
-            <div className="p-8 pt-6 border-t border-white/5 bg-slate-950/30">
-                <div className="flex items-center justify-center gap-6 mb-8">
-                    <div className="flex -space-x-3">
-                        {[1,2,3,4].map(i => (
-                            <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-950 bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-500">
-                                {String.fromCharCode(64 + i)}
+                       {activeTab === 'SIM' && (
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                            <h6 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Live Simulation Stream</h6>
+                            <div className="space-y-3">
+                                {[
+                                    { msg: 'Aggregating orderbook depth...', status: 'complete' },
+                                    { msg: 'Calculating latent volatility...', status: 'active' },
+                                    { msg: 'Syncing cross-chain vectors...', status: 'waiting' }
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400">{item.msg}</span>
+                                        <div className={`w-2 h-2 rounded-full ${item.status === 'complete' ? 'bg-term-success' : item.status === 'active' ? 'bg-term-primary animate-pulse' : 'bg-slate-700'}`} />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-white tabular-nums">1.2K+ COPYING</span>
-                        <span className="text-[8px] font-black text-term-success uppercase tracking-widest">+12 TODAY</span>
+                )}
+                
+                {activeTab === 'INTEL' && (
+                    <div className="space-y-6 animate-fade-in">
+                         <div className="p-4 bg-term-primary/5 border border-term-primary/20 rounded-2xl">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Activity size={12} className="text-term-primary" />
+                                <h6 className="text-[9px] font-black text-term-primary uppercase tracking-widest">Whale Movements (24H)</h6>
+                            </div>
+                            <div className="text-[10px] font-bold text-slate-300 leading-relaxed">
+                                This node has increased exposure by 12% in the last 4 hours, primarily in <span className="text-white">Political Alpha</span> sectors.
+                            </div>
+                         </div>
                     </div>
-                </div>
-
-                <button 
-                    onClick={() => isFull && !isFollowing ? onUpgrade() : onMirror(trader)}
-                    className="w-full btn-neon py-6 rounded-[24px] flex flex-col items-center justify-center gap-1 group/cta"
-                >
-                    <div className="flex items-center gap-3">
-                        <Zap size={20} className="text-slate-950 fill-slate-950 group-hover:scale-110 transition-transform" />
-                        <span className="text-lg font-black text-slate-950 uppercase tracking-[0.3em]">
-                            {isFull && !isFollowing ? 'UPGRADE' : (isFollowing ? 'SYNC ACTIVE' : 'START COPYING')}
-                        </span>
-                    </div>
-                    <span className="text-[9px] font-black text-slate-950/60 uppercase tracking-widest">Low Latency Signal Mirroring</span>
-                </button>
-
-                <p className="mt-6 text-center text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-0 italic">
-                    "🔥 120 users successfully mirrored today"
-                </p>
+                )}
             </div>
+
+            {/* REMOVED BOTTOM CTA BLOCK (MOVED TO TOP) */}
         </div>
     );
 };
@@ -505,18 +540,27 @@ const TraderDetailPanel = ({ trader, onMirror, isFollowing, isFull, onUpgrade })
 // MAIN COMPONENT
 // --------------------------------------------------------------------------------
 
-const Leaderboard = () => {
+const GlobalLeaderboard = () => {
     const { user } = useContext(AuthContext);
     const { settings, refreshStrategies } = useContext(PortfolioContext);
     const navigate = useNavigate();
     
     const [traders, setTraders] = useState([]);
+    const [filteredTraders, setFilteredTraders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [timeframe, setTimeframe] = useState('WEEK');
     const [sortBy, setSortBy] = useState('SCORE');
+    const [sortOrder, setSortOrder] = useState('DESC');
     const [selectedTrader, setSelectedTrader] = useState(null);
-    const [mirroringStatus, setMirroringStatus] = useState(null);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    
+    // Filtering States
+    const [search, setSearch] = useState('');
+    const [minWinRate, setMinWinRate] = useState(0);
+    const [riskProfile, setRiskProfile] = useState('ALL');
+    const [minTrades, setMinTrades] = useState(0);
+    const [showWatchedOnly, setShowWatchedOnly] = useState(false);
 
     // Initial Fetch
     useEffect(() => {
@@ -524,7 +568,7 @@ const Leaderboard = () => {
             setLoading(true);
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                const res = await fetch(`${apiUrl}/api/traders/leaderboard?timeframe=${timeframe}&sort_by=${sortBy}`);
+                const res = await fetch(`${apiUrl}/api/traders/leaderboard?timeframe=${timeframe}&sort_by=${sortBy}&sort_order=${sortOrder}`);
                 if (res.ok) {
                     const data = await res.json();
                     const tradersData = data.traders || [];
@@ -536,7 +580,74 @@ const Leaderboard = () => {
             } catch (err) { console.error(err); } finally { setLoading(false); }
         };
         fetchLeaderboard();
-    }, [timeframe, sortBy]);
+    }, [timeframe, sortBy, sortOrder]);
+
+    // Apply Filtering
+    useEffect(() => {
+        let result = [...traders];
+        
+        if (search) {
+            result = result.filter(t => t.username?.toLowerCase().includes(search.toLowerCase()));
+        }
+        
+        if (minWinRate > 0) {
+            result = result.filter(t => (t.win_rate * 100) >= minWinRate);
+        }
+        
+        if (riskProfile !== 'ALL') {
+            result = result.filter(t => {
+                if (riskProfile === 'LOW') return t.risk_score < 33;
+                if (riskProfile === 'MEDIUM') return t.risk_score >= 33 && t.risk_score < 66;
+                if (riskProfile === 'HIGH') return t.risk_score >= 66;
+                return true;
+            });
+        }
+        
+        if (minTrades > 0) {
+            result = result.filter(t => (t.total_trades || 0) >= minTrades);
+        }
+        
+        if (showWatchedOnly && user?.watchlist) {
+            result = result.filter(t => user.watchlist.some(w => w.address === (t.address || t.wallet_address)));
+        }
+        
+        setFilteredTraders(result);
+    }, [traders, search, minWinRate, riskProfile, minTrades, showWatchedOnly, user?.watchlist]);
+
+    const handleWatch = async (trader) => {
+        if (!user) { navigate('/login'); return; }
+        const address = trader.address || trader.wallet_address;
+        const isCurrentlyWatched = user.watchlist?.some(t => t.address === address);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const userId = user.user_id || user.userId;
+
+        try {
+            if (isCurrentlyWatched) {
+                const res = await fetch(`${apiUrl}/api/portfolio/watchlist/${address}?user_id=${userId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    const updatedWatchlist = (user.watchlist || []).filter(t => t.address !== address);
+                    user.watchlist = updatedWatchlist;
+                    setTraders([...traders]);
+                }
+            } else {
+                const res = await fetch(`${apiUrl}/api/portfolio/watchlist?user_id=${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        address: address, 
+                        username: trader.username || 'Anonymous Whale',
+                        image_url: trader.profile_image || null
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const updatedWatchlist = [...(user.watchlist || []), data.trader];
+                    user.watchlist = updatedWatchlist;
+                    setTraders([...traders]);
+                }
+            }
+        } catch (err) { console.error(err); }
+    };
 
     const handleMirror = async (trader) => {
         if (!user) { navigate('/login'); return; }
@@ -563,23 +674,27 @@ const Leaderboard = () => {
     };
 
     return (
-        <div className="w-full flex justify-center bg-[#061018] min-h-screen term-font pb-20">
+        <div className="w-full flex justify-center bg-[#061018] min-h-screen term-font pb-20 overflow-x-hidden">
             <DesignSystemStyles />
             
             <div className="w-[95%] max-w-[1920px] pt-8 flex flex-col gap-6">
                 
                 {/* 1. TOP INSIGHT BAR (Sticky Header Area) */}
                 <TopInsightBar 
-                    topTrader={traders[0] ? { name: traders[0].username, roi: (traders[0].roi || 12.4).toFixed(1) } : null}
+                    topTrader={traders[0] ? { 
+                        name: traders[0].username, 
+                        address: traders[0].address || traders[0].wallet_address,
+                        roi: (traders[0].roi || 12.4).toFixed(1) 
+                    } : null}
                     volume="142.8M"
                     winRate="84"
                     strategy="Political Alpha"
                 />
 
-                <div className="flex flex-col lg:flex-row gap-10 mt-6 min-h-[800px]">
-                    
-                    {/* 2. LEADERBOARD TABLE (Core Area) */}
-                    <div className="flex-1 flex flex-col gap-8">
+                {/* Primary Content (Leaderboard + Detailed Insight) */}
+                <div className="flex flex-col lg:flex-row gap-6 mt-6 min-h-[800px]">
+                    {/* 7. LEADERBOARD LIST (Left Column) */}
+                    <div className="flex-1 flex flex-col gap-3 min-w-0 pb-10">
                         
                         {/* HEADER & FILTERS */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
@@ -591,42 +706,140 @@ const Leaderboard = () => {
                             </div>
                             
                             {/* FILTERS PANEL */}
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
-                                    {['DAY', 'WEEK', 'MONTH', 'ALL'].map(tf => (
-                                        <button 
-                                            key={tf}
-                                            onClick={() => setTimeframe(tf)}
-                                            className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                                                timeframe === tf ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-400'
-                                            }`}
-                                        >
-                                            {tf}
-                                        </button>
-                                    ))}
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group">
+                                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-term-primary transition-colors" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="SEARCH TRADER..."
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-10 pr-6 text-[10px] font-black text-white focus:outline-none focus:border-term-primary/40 focus:bg-term-primary/[0.02] transition-all w-full md:w-64 tracking-widest placeholder:text-slate-700"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
+                                        {['DAY', 'WEEK', 'MONTH', 'ALL'].map(tf => (
+                                            <button 
+                                                key={tf}
+                                                onClick={() => setTimeframe(tf)}
+                                                className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                                                    timeframe === tf ? 'bg-white/10 text-white shadow-lg' : 'text-slate-600 hover:text-slate-400'
+                                                }`}
+                                            >
+                                                {tf}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                        className={`p-3 border rounded-2xl transition-all ${isFilterOpen ? 'bg-term-primary/10 border-term-primary text-term-primary' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'}`}
+                                    >
+                                        <Filter size={16} />
+                                    </button>
                                 </div>
 
-                                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
-                                    {[
-                                        { id: 'SCORE', label: 'WhaleScore' },
-                                        { id: 'ROI', label: 'ROI' },
-                                        { id: 'VOLUME', label: 'Volume' }
-                                    ].map(sort => (
+                                {isFilterOpen && (
+                                    <div className="flex flex-wrap items-center gap-6 p-6 bg-slate-900/40 border border-white/5 rounded-3xl animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Direction</span>
+                                            <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl">
+                                                {['DESC', 'ASC'].map(order => (
+                                                    <button 
+                                                        key={order}
+                                                        onClick={() => setSortOrder(order)}
+                                                        className={`px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                                            sortOrder === order ? 'bg-[#00FFC6] text-[#061018]' : 'text-slate-500 hover:text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {order}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="h-10 w-px bg-white/5" />
+
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Sort By</span>
+                                            <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl">
+                                                {[
+                                                    { id: 'SCORE', label: 'WhaleScore' },
+                                                    { id: 'ROI', label: 'ROI' },
+                                                    { id: 'VOLUME', label: 'Volume' }
+                                                ].map(sort => (
+                                                    <button 
+                                                        key={sort.id}
+                                                        onClick={() => setSortBy(sort.id)}
+                                                        className={`px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                                            sortBy === sort.id ? 'bg-[#00FFC6] text-[#061018]' : 'text-slate-500 hover:text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {sort.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="h-10 w-px bg-white/5" />
+
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Win Rate Min: {minWinRate}%</span>
+                                            <input 
+                                                type="range" min="0" max="95" step="5" 
+                                                value={minWinRate}
+                                                onChange={(e) => setMinWinRate(parseInt(e.target.value))}
+                                                className="w-32 accent-term-primary"
+                                            />
+                                        </div>
+
+                                        <div className="h-10 w-px bg-white/5" />
+
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Risk Profile</span>
+                                            <select 
+                                                value={riskProfile}
+                                                onChange={(e) => setRiskProfile(e.target.value)}
+                                                className="bg-black/20 text-[8px] font-black text-slate-300 uppercase py-1 px-2 rounded-lg border-none focus:ring-0 cursor-pointer"
+                                            >
+                                                <option value="ALL">ALL RISK</option>
+                                                <option value="LOW">LOW ONLY</option>
+                                                <option value="MEDIUM">MEDIUM ONLY</option>
+                                                <option value="HIGH">HIGH ONLY</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="h-10 w-px bg-white/5" />
+
                                         <button 
-                                            key={sort.id}
-                                            onClick={() => setSortBy(sort.id)}
-                                            className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                                                sortBy === sort.id ? 'bg-term-primary/10 text-term-primary' : 'text-slate-600 hover:text-slate-400'
+                                            onClick={() => setShowWatchedOnly(!showWatchedOnly)}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${
+                                                showWatchedOnly ? 'bg-term-primary/10 border-term-primary text-term-primary' : 'border-white/10 text-slate-500'
                                             }`}
                                         >
-                                            {sort.label}
+                                            <Star size={10} className={showWatchedOnly ? 'fill-term-primary' : ''} />
+                                            {showWatchedOnly ? 'WATCHED' : 'WATCHING'}
                                         </button>
-                                    ))}
-                                </div>
-                                
-                                <button className="p-3 bg-white/5 border border-white/5 rounded-2xl text-slate-500 hover:text-white transition-colors">
-                                    <Filter size={16} />
-                                </button>
+
+                                        <button 
+                                            onClick={() => {
+                                                setSearch('');
+                                                setMinWinRate(0);
+                                                setRiskProfile('ALL');
+                                                setMinTrades(0);
+                                                setShowWatchedOnly(false);
+                                                setSortBy('SCORE');
+                                                setSortOrder('DESC');
+                                                setTimeframe('WEEK');
+                                            }}
+                                            className="ml-auto px-4 py-2 border border-slate-800 rounded-xl text-[8px] font-black text-slate-400 hover:text-term-danger hover:border-term-danger/50 uppercase tracking-widest transition-all"
+                                        >
+                                            Reset All Node Filters
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -638,7 +851,7 @@ const Leaderboard = () => {
                                     <span className="text-[10px] font-black text-slate-600 uppercase tracking-[1em]">Synchronizing Orderbook Nodes...</span>
                                 </div>
                             ) : (
-                                traders.map((trader, idx) => {
+                                filteredTraders.map((trader, idx) => {
                                     const isFollowing = settings?.copy_sources?.some(s => s.address === trader.address);
                                     const isFull = (settings?.copy_sources?.length || 0) >= (settings?.source_slots || 10);
                                     
@@ -653,6 +866,8 @@ const Leaderboard = () => {
                                             isFull={isFull}
                                             onUpgrade={() => setIsUpgradeModalOpen(true)}
                                             isFollowing={isFollowing}
+                                            isWatched={user?.watchlist?.some(t => t.address === (trader.address || trader.wallet_address))}
+                                            onWatch={handleWatch}
                                         />
                                     );
                                 })
@@ -661,7 +876,7 @@ const Leaderboard = () => {
                     </div>
 
                     {/* 3. RIGHT INSIGHT PANEL (TRADER DETAILS) */}
-                    <div className="w-full lg:w-[420px] shrink-0">
+                    <div className="w-full lg:w-[340px] shrink-0 bg-slate-900/40 rounded-3xl border border-white/5 h-fit sticky top-[100px]">
                         <TraderDetailPanel 
                             trader={selectedTrader} 
                             onMirror={handleMirror}
@@ -710,4 +925,4 @@ const Leaderboard = () => {
     );
 };
 
-export default Leaderboard;
+export default GlobalLeaderboard;

@@ -7,7 +7,7 @@ import { ClobClient } from '@polymarket/clob-client';
 import RiskDisclosureModal from '../components/RiskDisclosureModal';
 
 const Settings = () => {
-    const { settings, updateCapital, addSource, toggleSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
+    const { settings, updateCapital, addSource, toggleSource, terminateSource, linkPolymarket, wipeUserData, acceptDisclosure } = useContext(PortfolioContext);
     const { logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('paper');
     const [capital, setCapital] = useState(settings.simulation_capital);
@@ -400,6 +400,32 @@ const Settings = () => {
                                         }}
                                     >
                                         {s.active ? 'Pause' : 'Resume'}
+                                    </button>
+                                    <button
+                                        className="btn-outline"
+                                        style={{
+                                            fontSize: '0.75rem',
+                                            padding: '0.25rem 0.75rem',
+                                            color: 'var(--danger)',
+                                            borderColor: 'rgba(239, 68, 68, 0.2)'
+                                        }}
+                                        onClick={async () => {
+                                            const inUse = strategies.some(strat =>
+                                                strat.source_addresses.includes(s.address)
+                                            );
+                                            if (inUse) {
+                                                setMessage({ type: 'error', text: `Cannot terminate source '${s.name}'. It is linked to an existing strategy. Please delete the strategy first.` });
+                                                return;
+                                            }
+                                            if (window.confirm(`Are you sure you want to terminate the copy-source '${s.name}'? History will be preserved but active mirroring will end.`)) {
+                                                const res = await terminateSource(s.id);
+                                                if (res.success) {
+                                                    setMessage({ type: 'success', text: 'Source terminated successfully.' });
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        Terminate
                                     </button>
                                 </div>
                             </div>

@@ -155,8 +155,8 @@ const Dashboard = () => {
                         </div>
                         <div className="hidden sm:block w-px h-3 bg-white/10"></div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-black tracking-widest uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded cursor-help hover:bg-indigo-500/20 transition-colors" title="Joined during Beta Phase">
-                                🎖️ Early Adopter
+                            <span className="text-[9px] font-black tracking-widest uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded cursor-help hover:bg-indigo-500/20 transition-colors" title="Rankings update every 24h">
+                                🎖️ Coming Soon
                             </span>
                         </div>
                     </div>
@@ -180,7 +180,7 @@ const Dashboard = () => {
                         <Briefcase size={14} className="text-primary" /> PORTFOLIO VALUE
                     </div>
                     <div className="text-4xl font-black text-white mb-2 tracking-tighter drop-shadow-sm font-mono">
-                        ${(portfolio?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${(portfolio?.balance || settings?.simulation_capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="flex items-center gap-3">
                         <div className={`text-sm font-black animate-pulse-glow px-3 py-1 rounded-full border ${(portfolio?.total_pnl || 0) >= 0 ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-rose-500 bg-rose-500/10 border-rose-500/20'}`}>
@@ -236,7 +236,7 @@ const Dashboard = () => {
                         </span>
                     )}
                     <span className="bg-slate-800/50 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase border border-slate-700/50 tracking-[0.2em]">
-                        RANK: #{portfolio?.global_rank || Math.max(1, 10000 - Math.floor(portfolio?.total_pnl || 0))} / {10000 + Math.floor(leaderboard.length * 14.3)} USERS
+                        RANK: #{portfolio?.global_rank || '...'} / {portfolio?.total_users || '...'} USERS
                     </span>
                 </div>
                 <Link to="/performance" className="group no-underline">
@@ -301,7 +301,7 @@ const Dashboard = () => {
                     ))}
 
                     {/* Deploy New Alpha Placeholder (Always Visible) */}
-                    <Link to="/traders" className="bg-slate-900/20 backdrop-blur-xl border-2 border-dashed border-white/5 hover:border-primary/40 rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 group transition-all hover:scale-[1.02] active:scale-[0.98] duration-fast ease-emphasis no-underline min-h-[180px]">
+                    <Link to="/globalleaderboard" className="bg-slate-900/20 backdrop-blur-xl border-2 border-dashed border-white/5 hover:border-primary/40 rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 group transition-all hover:scale-[1.02] active:scale-[0.98] duration-fast ease-emphasis no-underline min-h-[180px]">
                         <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors flex-shrink-0 animate-cta-idle">
                             <Plus size={24} className="text-slate-500 group-hover:text-primary transition-colors" />
                         </div>
@@ -328,7 +328,7 @@ const Dashboard = () => {
                 <div className="bg-slate-900/40 backdrop-blur-xl rounded-[32px] border border-white/5 overflow-hidden flex flex-col">
                     <div className="p-6 border-b border-white/5 flex items-center justify-between">
                         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white">Top Alphas (24H)</h3>
-                        <Link to="/traders" className="text-[9px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest no-underline border border-primary/20 bg-primary/10 px-3 py-1.5 rounded-lg active:scale-95">See All</Link>
+                        <Link to="/globalleaderboard" className="text-[9px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest no-underline border border-primary/20 bg-primary/10 px-3 py-1.5 rounded-lg active:scale-95">See All</Link>
                     </div>
                     <div className="flex flex-col p-2">
                         {isLoadingLeaderboard ? (

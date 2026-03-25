@@ -204,9 +204,13 @@ class PolymarketService:
             if period == "WEEKLY": period = "WEEK"
             if period == "MONTHLY": period = "MONTH"
             
-            # 1. Check DynamoDB Cache First (Daily persistence)
-            today_str = datetime.utcnow().strftime('%Y-%m-%d')
-            cached_traders = self._get_db_snapshot(today_str, period)
+            # 1. 30-minute bucketed cache check (DynamoDB persistence)
+            # bucket_index 0-47 (2 buckets per hour)
+            now = datetime.utcnow()
+            bucket_index = (now.hour * 2) + (1 if now.minute >= 30 else 0)
+            snapshot_key = f"{now.strftime('%Y-%m-%d')}-B{bucket_index:02d}"
+            
+            cached_traders = self._get_db_snapshot(snapshot_key, period)
             if cached_traders:
                 # Return cached data after sorting by requested metric
                 return self._sort_leaderboard(cached_traders, sort_by)[:limit]
@@ -269,8 +273,8 @@ class PolymarketService:
                     p_trader["tags"] = TagEngine.assign_tags({**p_trader, **deep_stats})
                     processed_traders.append(p_trader)
                 
-                # 3. Save to DynamoDB for persistent daily view
-                self._save_db_snapshot(today_str, period, processed_traders)
+                # 3. Save to DynamoDB with 30-min bucket key
+                self._save_db_snapshot(snapshot_key, period, processed_traders)
                 
                 return self._sort_leaderboard(processed_traders, sort_by)[:limit]
         except Exception as e:

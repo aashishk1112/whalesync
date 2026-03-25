@@ -8,7 +8,7 @@ import { PortfolioProvider } from './context/PortfolioContext';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
-import Traders from './pages/Traders';
+import GlobalLeaderboard from './pages/Traders';
 import Simulator from './pages/Simulator';
 import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -60,7 +60,7 @@ const Layout = ({ children }) => {
             </Link>
             <nav className="flex items-center gap-6">
               <Link to="/dashboard" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Dashboard</Link>
-              <Link to="/traders" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
+              <Link to="/globalleaderboard" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Leaderboard</Link>
               <Link to="/performance" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Performance</Link>
               <Link to="/simulator" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Simulator</Link>
               <Link to="/subscription" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest no-underline transition-colors">Subscription</Link>
@@ -149,7 +149,7 @@ function App() {
               
               {/* Dashboard and other app pages moved or guarded */}
               <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-              <Route path="/traders" element={<ProtectedRoute><Layout><Traders /></Layout></ProtectedRoute>} />
+              <Route path="/globalleaderboard" element={<ProtectedRoute><Layout><GlobalLeaderboard /></Layout></ProtectedRoute>} />
               <Route path="/performance" element={<ProtectedRoute><Layout><PerformanceDashboard /></Layout></ProtectedRoute>} />
               <Route path="/simulator" element={<ProtectedRoute><Layout><Simulator /></Layout></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><Layout><SubscriptionPage /></Layout></ProtectedRoute>} />

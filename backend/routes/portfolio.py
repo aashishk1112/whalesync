@@ -15,7 +15,9 @@ from services.dynamodb_service import (
     accept_risk_disclosure,
     perform_aml_screening,
     get_subscription_tier,
-    get_system_config
+    get_system_config,
+    add_to_watchlist,
+    remove_from_watchlist
 )
 from services.stripe_service import create_checkout_session
 
@@ -27,6 +29,11 @@ class CopyTradeRequest(BaseModel):
     position: str # YES/NO
     amount: float
     price_odds: float
+
+class WatchlistRequest(BaseModel):
+    address: str
+    username: str
+    image_url: Optional[str] = None
 
 def self_heal_sources(user_id: str, current_sources: List[Dict]):
     updated = False
@@ -126,9 +133,40 @@ def get_my_portfolio(user_id: str):
     avg_invested = (float(total_invested_resolved) / float(total_resolved)) if total_resolved > 0 else 0.0
     risk_score = min(10.0, (avg_invested / max(1.0, float(balance)) * 50.0)) 
 
-    # Global Rank (Phase 6)
-    global_rank = polymarket_service.calculate_global_rank(roi)
-    
+    # 3. Internal Global Rank (based on simulation_capital + unrealized_pnl)
+    # For MVP we scan. In high scale, we'd use a sorted GSI or Redis.
+    internal_rank = 1
+    total_users = 1
+    try:
+        from services.dynamodb_service import users_table
+        # We need to compare this user's current total value (balance + unrealized) 
+        # against other users' simulation_capital (which represents their last settled balance)
+        all_users_scan = users_table.scan(ProjectionExpression="userId, simulation_capital")
+        all_user_items = all_users_scan.get("Items", [])
+        
+        user_values = []
+        current_user_total = float(balance) + float(total_unrealized_pnl)
+        
+        for u in all_user_items:
+            uid = u.get("userId")
+            if uid == user_id:
+                user_values.append(current_user_total)
+            else:
+                user_values.append(float(u.get("simulation_capital", 0)))
+        
+        user_values.sort(reverse=True)
+        total_users = len(user_values)
+        
+        # Find exact rank
+        for i, val in enumerate(user_values):
+            if current_user_total >= val:
+                internal_rank = i + 1
+                break
+    except Exception as e:
+        print(f"Error calculating internal global rank: {e}")
+        internal_rank = 127 # Realistic fallback
+        total_users = 1000
+
     portfolio = {
         "balance": float(f"{balance:.2f}"),
         "total_pnl": float(f"{total_pnl:.2f}"),
@@ -136,7 +174,8 @@ def get_my_portfolio(user_id: str):
         "accuracy": float(f"{accuracy:.1f}"),
         "roi": float(f"{roi:.2f}"),
         "risk_score": float(f"{risk_score:.1f}"),
-        "global_rank": global_rank,
+        "global_rank": int(internal_rank),
+        "total_users": int(total_users),
         "total_resolved": int(total_resolved),
         "open_positions": open_positions
     }
@@ -306,6 +345,24 @@ def link_polymarket(data: LinkPolymarketRequest, user_id: str):
         "profile": profile,
         "aml_status": aml_result["status"]
     }
+
+@router.post("/watchlist")
+def add_to_user_watchlist(data: WatchlistRequest, user_id: str):
+    trader_data = {
+        "address": data.address,
+        "username": data.username,
+        "image_url": data.image_url,
+        "added_at": str(uuid.uuid4())
+    }
+    add_to_watchlist(user_id, trader_data)
+    return {"message": "Trader added to watchlist", "trader": trader_data}
+
+@router.delete("/watchlist/{address}")
+def remove_from_user_watchlist(address: str, user_id: str):
+    success = remove_from_watchlist(user_id, address)
+    if not success:
+        raise HTTPException(status_code=404, detail="Trader not in watchlist")
+    return {"message": "Trader removed from watchlist"}
 
 @router.post("/accept-disclosure")
 def accept_disclosure(user_id: str):

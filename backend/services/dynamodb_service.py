@@ -373,12 +373,47 @@ def delete_copy_source(user_id: str, source_id: str):
     if not user or "copy_sources" not in user:
         return False
     
-    sources = [s for s in user["copy_sources"] if s.get("id") != source_id]
+    sources = user["copy_sources"]
+    updated = False
+    for s in sources:
+        if s.get("id") == source_id:
+            s["active"] = False
+            s["terminated"] = True
+            s["terminated_at"] = get_now_iso()
+            updated = True
+            break
+            
+    if updated:
+        users_table.update_item(
+            Key={"userId": user_id},
+            UpdateExpression="SET copy_sources = :s",
+            ExpressionAttributeValues={":s": sources}
+        )
+    return updated
+
+def add_to_watchlist(user_id: str, trader_data: Dict[str, Any]):
+    """Adds a trader address to the user's watchlist."""
+    users_table.update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET watchlist = list_append(if_not_exists(watchlist, :empty_list), :t)",
+        ExpressionAttributeValues={
+            ":t": [trader_data],
+            ":empty_list": []
+        }
+    )
+
+def remove_from_watchlist(user_id: str, address: str):
+    """Removes a trader from the user's watchlist."""
+    user = get_user_by_id(user_id)
+    if not user or "watchlist" not in user:
+        return False
+    
+    watchlist = [t for t in user["watchlist"] if t.get("address") != address]
     
     users_table.update_item(
         Key={"userId": user_id},
-        UpdateExpression="SET copy_sources = :s",
-        ExpressionAttributeValues={":s": sources}
+        UpdateExpression="SET watchlist = :w",
+        ExpressionAttributeValues={":w": watchlist}
     )
     return True
 
@@ -522,7 +557,13 @@ def update_strategy_status(strategy_id: str, status: str):
     )
 
 def delete_strategy(strategy_id: str):
-    strategies_table.delete_item(Key={"strategy_id": strategy_id})
+    iso_now = get_now_iso()
+    strategies_table.update_item(
+        Key={"strategy_id": strategy_id},
+        UpdateExpression="SET #s = :val, deleted_at = :now",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":val": "deleted", ":now": iso_now}
+    )
 
 def get_strategy_trades(strategy_id: str) -> List[Dict[str, Any]]:
     response = trades_table.scan(
