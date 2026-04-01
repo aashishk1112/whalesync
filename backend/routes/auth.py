@@ -25,6 +25,20 @@ def mock_auth(data: dict):
     picture = "https://lh3.googleusercontent.com/a/ACg8ocL-X"
     
     db_user = get_user_by_email(email)
+    
+    # --- Recovery Flow Check ---
+    if db_user and db_user.get("status") == "deleted":
+        return {
+            "recovery_required": True,
+            "email": email,
+            "stats": {
+                "rank": f"#{db_user.get('last_global_rank', '99')}",
+                "roi": "+18.4%",
+                "followers": f"{db_user.get('follower_count', 0)} copiers",
+                "last_active": "Recently"
+            }
+        }
+
     if not db_user:
         db_user = create_user(email, username, picture)
     
@@ -59,6 +73,25 @@ def google_auth(data: GoogleLogin):
 
         db_user = get_user_by_email(email)
         
+        # --- Check for Recovery Flow ---
+        if db_user and db_user.get("status") == "deleted":
+            # Fetch simple stats for the recovery card
+            from services.polymarket_service import polymarket_service
+            trader_stats = {}
+            if db_user.get("polymarket_address"):
+                trader_stats = polymarket_service.get_trader_stats(db_user["polymarket_address"])
+
+            return {
+                "recovery_required": True,
+                "email": email,
+                "stats": {
+                    "rank": f"#{db_user.get('last_global_rank', '99')}",
+                    "roi": f"{trader_stats.get('roi', 0):+.1f}%",
+                    "followers": f"{db_user.get('follower_count', 0)} copiers",
+                    "last_active": "Recently"
+                }
+            }
+            
         if not db_user:
             # Auto-register if user doesn't exist
             db_user = create_user(email, first_name, picture, data.referral_code)
@@ -125,3 +158,35 @@ def get_me(token: str):
         "bonus_slots": int(user.get("bonus_slots", 0)),
         "bonus_capital": float(user.get("bonus_capital", 0))
     }}
+@router.post("/restore")
+def restore_account(data: dict):
+    from services.dynamodb_service import restore_user, get_user_by_email
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+        
+    user = get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    restore_user(user["userId"])
+    
+    # Return new token
+    token = create_access_token(data={"sub": user['userId'], "username": user.get('username', 'User')})
+    return {"success": True, "access_token": token, "user": user}
+
+@router.post("/create_new")
+def start_fresh(data: dict):
+    from services.dynamodb_service import create_fresh_account, get_user_by_email
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+        
+    old_user = get_user_by_email(email)
+    if not old_user:
+         raise HTTPException(status_code=404, detail="User already not found")
+         
+    new_user = create_fresh_account(old_user["userId"], email, old_user.get("username", "User"), old_user.get("picture_url"))
+    
+    token = create_access_token(data={"sub": new_user['userId'], "username": new_user.get('username', 'User')})
+    return {"success": True, "access_token": token, "user": new_user}

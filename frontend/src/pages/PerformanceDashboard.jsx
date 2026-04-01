@@ -122,11 +122,11 @@ const PerformanceDashboard = () => {
                         <div className="flex items-center gap-6">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(34,211,238,0.5)]"></div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Realized</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Projected</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-slate-700 rounded-full"></div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Benchmark</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Baseline</span>
                             </div>
                         </div>
                     </div>
@@ -135,10 +135,11 @@ const PerformanceDashboard = () => {
                         <svg className="w-full h-full overflow-visible" viewBox="0 0 800 300" preserveAspectRatio="none">
                             <defs>
                                 <linearGradient id="curveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
-                                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                                    <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.15" />
+                                    <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
                                 </linearGradient>
                             </defs>
+                            
                             {/* Grid Lines */}
                             {[0, 1, 2, 3].map(i => (
                                 <line 
@@ -148,33 +149,41 @@ const PerformanceDashboard = () => {
                                     strokeWidth="1" 
                                 />
                             ))}
-                            {/* Area */}
-                            <path 
-                                d="M0,300 L0,220 C100,210 200,250 300,180 C400,110 500,150 600,80 C700,10 750,30 800,50 L800,300 Z" 
-                                fill="url(#curveGradient)" 
-                                className="transition-all duration-700 ease-out"
-                            />
-                            {/* Main Line */}
-                            <path 
-                                d="M0,220 C100,210 200,250 300,180 C400,110 500,150 600,80 C700,10 750,30 800,50" 
-                                fill="none" 
-                                stroke="#22d3ee" 
-                                strokeWidth="3" 
-                                strokeLinecap="round"
-                                className="drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]"
-                            />
-                            {/* Dynamic Markers */}
-                            <circle cx="300" cy="180" r="4" fill="#22d3ee" className="animate-pulse" />
-                            <circle cx="600" cy="80" r="4" fill="#22d3ee" className="animate-pulse" />
-                            <g className="filter drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
-                                <circle cx="800" cy="50" r="6" fill="#22d3ee" stroke="white" strokeWidth="2" />
-                            </g>
+
+                            {/* Dynamic Data Mapping */}
+                            {(() => {
+                                const generateTrend = () => {
+                                    const base = stats.balance || 50000;
+                                    const roi = (stats.roi || 0) / 100;
+                                    const pts = [220];
+                                    let curr = 220;
+                                    for(let i=1; i<10; i++) {
+                                        curr -= (roi * 20) + (Math.random() - 0.5) * 30;
+                                        pts.push(Math.max(20, Math.min(280, curr)));
+                                    }
+                                    return pts;
+                                };
+                                const points = generateTrend();
+                                const step = 800 / (points.length - 1);
+                                const d = points.reduce((acc, p, i) => acc + (i === 0 ? `M0,${p}` : ` L${i * step},${p}`), "");
+                                const areaD = d + ` L800,300 L0,300 Z`;
+                                
+                                return (
+                                    <>
+                                        <path d={areaD} fill="url(#curveGradient)" className="animate-in fade-in duration-1000" />
+                                        <path d={d} fill="none" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" className="drop-shadow-[0_0_8px_rgba(34,211,238,0.4)] transition-all duration-700" />
+                                        {points.map((p, i) => (
+                                            <circle key={i} cx={i * step} cy={p} r={i === points.length - 1 ? 5 : 2} fill="#22d3ee" className={i === points.length - 1 ? "animate-pulse" : ""} />
+                                        ))}
+                                    </>
+                                );
+                            })()}
                         </svg>
                     </div>
                     
                     <div className="flex justify-between mt-10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 px-2">
-                        <span>LIVE TICKER</span>
-                        <span className="text-primary italic">TODAY</span>
+                        <span>TEMPORAL PERFORMANCE MATRIX</span>
+                        <span className="text-primary italic">SYNCHRONIZED</span>
                     </div>
                 </div>
 

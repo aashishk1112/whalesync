@@ -1,8 +1,8 @@
 import os
 import boto3
-from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List, Dict, Any
 from decimal import Decimal
-from datetime import datetime, timezone
 import uuid
 import random
 import string
@@ -291,12 +291,53 @@ def update_user_subscription(user_id: str, tier: str, stripe_subscription_id: Op
         ExpressionAttributeValues=expr_vals
     )
 
-def update_user_capital(user_id: str, new_capital: float):
+def soft_delete_user(user_id: str):
+    """Sets user status to deleted for potential recovery."""
     users_table.update_item(
         Key={"userId": user_id},
-        UpdateExpression="SET simulation_capital = :c",
-        ExpressionAttributeValues={":c": Decimal(str(new_capital))}
+        UpdateExpression="SET #s = :d, deleted_at = :now",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":d": "deleted", ":now": get_now_iso()}
     )
+
+def restore_user(user_id: str):
+    """Restores a soft-deleted user profile."""
+    users_table.update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET #s = :a REMOVE deleted_at",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":a": "active"}
+    )
+    return True
+
+def create_fresh_account(old_user_id: str, email: str, username: str, picture_url: Optional[str] = None):
+    """
+    Archives the old user_id and creates a new one.
+    The old account stays in 'archived' status as a reference.
+    """
+    # 1. Archive old account
+    users_table.update_item(
+        Key={"userId": old_user_id},
+        UpdateExpression="SET #s = :archived, archived_at = :now",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":archived": "archived", ":now": get_now_iso()}
+    )
+    
+    # 2. Create new account with new ID
+    new_user = create_user(email, username, picture_url)
+    
+    # Apply restrictions: leaderboard_lock (mocked for now)
+    users_table.update_item(
+        Key={"userId": new_user["userId"]},
+        UpdateExpression="SET restrictions = :r",
+        ExpressionAttributeValues={
+            ":r": {
+                "leaderboard_lock_until": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+                "badge_eligibility": False
+            }
+        }
+    )
+    return new_user
 
 def add_copy_source(user_id: str, source: Dict[str, Any]):
     users_table.update_item(

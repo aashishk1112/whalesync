@@ -1,30 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@500;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-dark: #090B0F;
-  --bg-card: rgba(13, 17, 23, 0.7);
-  --bg-input: rgba(0, 0, 0, 0.4);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --bg-dark: #0A1628;
+  --bg-darker: #070D18;
+  --bg-card: rgba(13, 22, 40, 0.7);
+  --bg-insight: rgba(123, 97, 255, 0.05);
   
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.15);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.05);
+  --primary: #00D4FF; /* Electric Blue */
+  --primary-hover: #00BAE0;
+  --profit: #00FFA3; /* Profit Green */
+  --risk: #FF4D6D;   /* Risk Red */
+  --ai-purple: #7B61FF; /* AI Purple */
+  
+  --text-main: #FFFFFF;
+  --text-muted: #8E9AAF;
+  
+  --border-glass: rgba(255, 255, 255, 0.05);
+  --glass-blur: blur(20px);
+  
+  --transition-standard: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-  /* Animation Tokens */
-  --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', sans-serif;
   color-scheme: dark;
 }
 
@@ -36,13 +37,19 @@ body {
   position: relative;
   background-color: var(--bg-dark);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(0, 212, 255, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(123, 97, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(0, 255, 163, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 #root {

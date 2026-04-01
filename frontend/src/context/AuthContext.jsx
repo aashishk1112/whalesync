@@ -27,6 +27,10 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await res.json();
+      
+      if (data.recovery_required) {
+        return { success: false, recoveryRequired: true, recoveryData: data };
+      }
 
       if (res.ok) {
         localStorage.setItem('token', data.access_token);
@@ -36,7 +40,50 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, error: data.detail };
     } catch (err) {
+      console.error("Login error:", err);
       return { success: false, error: "Network error" };
+    }
+  };
+
+  const restoreAccount = async (email) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/auth/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        return { success: true };
+      }
+      return { success: false, error: data.detail };
+    } catch (err) {
+      return { success: false, error: "Restore failed" };
+    }
+  };
+
+  const createFreshAccount = async (email) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/auth/create_new`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        return { success: true };
+      }
+      return { success: false, error: data.detail };
+    } catch (err) {
+      return { success: false, error: "Fresh start failed" };
     }
   };
 
@@ -46,7 +93,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading]);
+  const value = useMemo(() => ({ 
+    user, 
+    loading, 
+    login, 
+    logout,
+    restoreAccount,
+    createFreshAccount
+  }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>

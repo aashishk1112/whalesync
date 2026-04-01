@@ -207,6 +207,19 @@ export const PortfolioProvider = ({ children }) => {
         return { success: false };
     };
 
+    const deactivateAccount = async () => {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${apiUrl}/api/portfolio/deactivate?user_id=${user.user_id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                return { success: true };
+            }
+        } catch (err) { console.error(err); }
+        return { success: false };
+    };
+
     const value = useMemo(() => ({
         portfolio,
         settings,
@@ -220,6 +233,7 @@ export const PortfolioProvider = ({ children }) => {
         terminateSource,
         linkPolymarket,
         wipeUserData,
+        deactivateAccount,
         acceptDisclosure
     }), [portfolio, settings, strategies, fetchPortfolio, fetchStrategies]);
 

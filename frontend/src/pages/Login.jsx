@@ -5,22 +5,76 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Zap, Shield, Sparkles, Activity, Lock, Globe, Cpu } from 'lucide-react';
 
 import AlphaTicker from '../components/AlphaTicker';
+import AccountRecoveryModal from '../components/AccountRecoveryModal';
 
 const Login = () => {
     const [error, setError] = useState('');
-    const { user, login } = useContext(AuthContext);
+    const { user, login, restoreAccount, createFreshAccount } = useContext(AuthContext);
     const navigate = useNavigate();
     const location = useLocation();
+
+    const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
+    const [recoveryData, setRecoveryData] = useState(null);
+
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('test_recovery') === 'true') {
+            setRecoveryData({
+                email: 'test@whalesync.com',
+                stats: { rank: '#42', roi: '+18.4%', followers: '128 copiers', last_active: '2 weeks ago' }
+            });
+            setIsRecoveryModalOpen(true);
+        }
+
+        const handleMsg = (e) => {
+            if (e.detail?.email) {
+                setRecoveryData({
+                    email: e.detail.email,
+                    stats: e.detail.stats || { rank: '#42', roi: '+18.4%', followers: '128 copiers', last_active: '2 weeks ago' }
+                });
+                setIsRecoveryModalOpen(true);
+            }
+        };
+        window.addEventListener('TRIGGER_RECOVERY_MODAL', handleMsg);
+        return () => window.removeEventListener('TRIGGER_RECOVERY_MODAL', handleMsg);
+    }, []);
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setError('');
         const params = new URLSearchParams(location.search);
         const ref = params.get('ref');
         const result = await login(credentialResponse.credential, ref);
+        
+        if (result.recoveryRequired) {
+            setRecoveryData(result.recoveryData);
+            setIsRecoveryModalOpen(true);
+            return;
+        }
+
         if (result.success) {
             navigate('/dashboard');
         } else {
             setError(result.error || 'Google login failed.');
+        }
+    };
+
+    const handleRestoreAction = async (email) => {
+        const res = await restoreAccount(email);
+        if (res.success) {
+            setIsRecoveryModalOpen(false);
+            navigate('/dashboard');
+        } else {
+            setError(res.error || "Failed to restore account.");
+        }
+    };
+
+    const handleStartFreshAction = async (email) => {
+        const res = await createFreshAccount(email);
+        if (res.success) {
+            setIsRecoveryModalOpen(false);
+            navigate('/onboarding');
+        } else {
+            setError(res.error || "Failed to create new account.");
         }
     };
 
@@ -162,6 +216,14 @@ const Login = () => {
                     <a href="/privacy" className="text-[8px] font-black text-slate-600 uppercase tracking-widest no-underline hover:text-primary transition-colors">Privacy Disclosure</a>
                 </div>
             </footer>
+
+            <AccountRecoveryModal 
+                isOpen={isRecoveryModalOpen}
+                onClose={() => setIsRecoveryModalOpen(false)}
+                recoveryData={recoveryData}
+                onRestore={handleRestoreAction}
+                onStartFresh={handleStartFreshAction}
+            />
         </div>
     );
 };

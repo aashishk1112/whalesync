@@ -12,6 +12,7 @@ from services.dynamodb_service import (
     record_trade as db_record_trade,
     link_user_polymarket_address,
     wipe_user_data,
+    soft_delete_user,
     accept_risk_disclosure,
     perform_aml_screening,
     get_subscription_tier,
@@ -133,38 +134,47 @@ def get_my_portfolio(user_id: str):
     avg_invested = (float(total_invested_resolved) / float(total_resolved)) if total_resolved > 0 else 0.0
     risk_score = min(10.0, (avg_invested / max(1.0, float(balance)) * 50.0)) 
 
-    # 3. Internal Global Rank (based on simulation_capital + unrealized_pnl)
-    # For MVP we scan. In high scale, we'd use a sorted GSI or Redis.
+    # 3. Internal Global Rank based on accurate Total PNL (Realized + Unrealized)
     internal_rank = 1
     total_users = 1
     try:
         from services.dynamodb_service import users_table
-        # We need to compare this user's current total value (balance + unrealized) 
-        # against other users' simulation_capital (which represents their last settled balance)
-        all_users_scan = users_table.scan(ProjectionExpression="userId, simulation_capital")
+        
+        # Current user's true PNL
+        current_user_pnl = float(total_pnl)
+        
+        all_users_scan = users_table.scan(ProjectionExpression="userId, simulation_capital, subscription_tier")
         all_user_items = all_users_scan.get("Items", [])
         
-        user_values = []
-        current_user_total = float(balance) + float(total_unrealized_pnl)
+        # Get baseline for ROI/PNL comparison
+        sys_config = get_system_config()
+        default_init = float(sys_config.get("default_capital", 50000.0))
         
+        user_pnl_values = []
         for u in all_user_items:
             uid = u.get("userId")
             if uid == user_id:
-                user_values.append(current_user_total)
+                user_pnl_values.append(current_user_pnl)
             else:
-                user_values.append(float(u.get("simulation_capital", 0)))
+                # Approximate other users' PNL: current_capital - baseline_for_their_tier
+                # Note: This is an MVP approximation until we store lifetime_pnl in the user record
+                others_balance = float(u.get("simulation_capital", default_init))
+                others_init = default_init # Default fallback
+                # In a real app, we'd lookup their tier's max_capital here
+                user_pnl_values.append(others_balance - others_init)
         
-        user_values.sort(reverse=True)
-        total_users = len(user_values)
+        user_pnl_values.sort(reverse=True)
+        total_users = len(user_pnl_values)
         
-        # Find exact rank
-        for i, val in enumerate(user_values):
-            if current_user_total >= val:
+        # Find exact rank based on PNL
+        # PNL is the fairest metric for ranking (Absolute gains in simulated dollars)
+        for i, val in enumerate(user_pnl_values):
+            if current_user_pnl >= val:
                 internal_rank = i + 1
                 break
     except Exception as e:
         print(f"Error calculating internal global rank: {e}")
-        internal_rank = 127 # Realistic fallback
+        internal_rank = 127
         total_users = 1000
 
     portfolio = {
@@ -381,6 +391,18 @@ def wipe_data(user_id: str):
     try:
         wipe_user_data(user_id)
         return {"message": "All user data wiped successfully. You have been forgotten."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/deactivate")
+def deactivate_account(user_id: str):
+    """
+    Implements Soft Delete. 
+    User is marked as deleted but history is kept for recovery.
+    """
+    try:
+        soft_delete_user(user_id)
+        return {"message": "Account deactivated. You can restore it if you return later."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
