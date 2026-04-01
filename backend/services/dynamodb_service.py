@@ -291,6 +291,14 @@ def update_user_subscription(user_id: str, tier: str, stripe_subscription_id: Op
         ExpressionAttributeValues=expr_vals
     )
 
+def update_user_capital(user_id: str, capital: float):
+    """Updates the user's simulation capital directly."""
+    users_table.update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET simulation_capital = :c",
+        ExpressionAttributeValues={":c": Decimal(str(capital))}
+    )
+
 def soft_delete_user(user_id: str):
     """Sets user status to deleted for potential recovery."""
     users_table.update_item(
