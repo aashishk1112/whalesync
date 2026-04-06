@@ -554,6 +554,7 @@ const GlobalLeaderboard = () => {
     const [selectedTrader, setSelectedTrader] = useState(null);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [mirroringStatus, setMirroringStatus] = useState(null);
     
     // Filtering States
     const [search, setSearch] = useState('');
