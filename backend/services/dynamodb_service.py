@@ -6,6 +6,8 @@ from decimal import Decimal
 import uuid
 import random
 import string
+import json
+import time
 from boto3.dynamodb.conditions import Key, Attr
 # We let main.py handle dotenv or rely on Lambda's injected environment variables.
 
@@ -18,6 +20,7 @@ STRATEGIES_TABLE = os.environ.get("STRATEGIES_TABLE") or f"{env}-whalesync-strat
 SUBSCRIPTION_TIERS_TABLE = os.environ.get("SUBSCRIPTION_TIERS_TABLE") or f"{env}-whalesync-subscription-tiers"
 SYSTEM_TABLE = os.environ.get("SYSTEM_TABLE") or f"{env}-whalesync-system-config"
 REFERRAL_USAGE_TABLE = os.environ.get("REFERRAL_USAGE_TABLE") or f"{env}-whalesync-referral-usage"
+CACHE_TABLE = os.environ.get("CACHE_TABLE") or f"{env}-whalesync-cache"
 
 print(f"[DEBUG] USERS_TABLE: {USERS_TABLE}")
 print(f"[DEBUG] ENVIRONMENT: {env}")
@@ -51,9 +54,48 @@ try:
     subscription_tiers_table = dynamodb.Table(SUBSCRIPTION_TIERS_TABLE)
     system_table = dynamodb.Table(SYSTEM_TABLE)
     referral_usage_table = dynamodb.Table(REFERRAL_USAGE_TABLE)
+    cache_table = dynamodb.Table(CACHE_TABLE)
     print(f"[DynamoDB] Successfully initialized table references for environment: {env}")
 except Exception as e:
     print(f"[DynamoDB] CRITICAL ERROR during table initialization: {e}")
+
+# --- Caching Management ---
+def set_cache_item(key: str, value: Any, ttl_seconds: int = 600) -> bool:
+    """Sets an item in DynamoDB cache with TTL."""
+    if not cache_table: return False
+    try:
+        expires_at = int(time.time()) + ttl_seconds
+        serialized_val = json.dumps(value)
+        cache_table.put_item(
+            Item={
+                "cache_key": key,
+                "value": serialized_val,
+                "expires_at": expires_at
+            }
+        )
+        return True
+    except Exception as e:
+        print(f"Error setting cache for {key}: {e}")
+        return False
+
+def get_cache_item(key: str) -> Optional[Any]:
+    """Retrieves an item from DynamoDB cache if not expired."""
+    if not cache_table: return None
+    try:
+        res = cache_table.get_item(Key={"cache_key": key})
+        item = res.get("Item")
+        if item:
+            expires_at = item.get("expires_at", 0)
+            if int(time.time()) < expires_at:
+                return json.loads(item["value"])
+            else:
+                # Expired early fetch, cleanup
+                cache_table.delete_item(Key={"cache_key": key})
+        return None
+    except Exception as e:
+        print(f"Error getting cache for {key}: {e}")
+        return None
+
 
 # --- Subscription Tier Management ---
 _subscription_tiers_cache = {}

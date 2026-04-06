@@ -7,11 +7,11 @@ from dotenv import load_dotenv
 import boto3
 
 from services.metrics_engine import MetricsEngine, TagEngine
+from services.dynamodb_service import get_cache_item, set_cache_item
 
 class PolymarketService:
     def __init__(self):
         self.base_url = "https://clob.polymarket.com" # Example Gamma CLOB API
-        self._stats_cache = {} # address -> {stats, expiry}
         
         # DynamoDB for daily snapshots
         region = os.getenv('AWS_REGION', 'ap-south-1')
@@ -79,12 +79,11 @@ class PolymarketService:
 
     def get_trader_stats(self, address: str) -> Dict[str, Any]:
         """Fetch deep stats (wins, drawdown, history) for a trader."""
-        # 1. Simple Cache Check
-        now = time.time()
-        if address in self._stats_cache:
-            cache_entry = self._stats_cache[address]
-            if now < cache_entry["expiry"]:
-                return cache_entry["stats"]
+        # 1. DynamoDB Cache Check
+        cache_key = f"stats_{address}"
+        cached = get_cache_item(cache_key)
+        if cached:
+            return cached
 
         try:
             # 2. Fetch positions for deep enrichment
@@ -140,8 +139,8 @@ class PolymarketService:
                 "consistency_score": min(1.0, 1.0 - (max_drawdown * 2.0)) if total_trades > 5 else 0.5
             }
             
-            # Cache for 10 minutes
-            self._stats_cache[address] = {"stats": stats, "expiry": now + 600}
+            # Cache for 10 minutes (600s)
+            set_cache_item(cache_key, stats, 600)
             return stats
         except Exception as e:
             print(f"Error fetching trader stats for {address}: {e}")
@@ -149,6 +148,11 @@ class PolymarketService:
 
     def get_market_price(self, condition_id: str) -> float:
         """Fetch the current mid-price or last price for a condition."""
+        cache_key = f"price_{condition_id}"
+        cached = get_cache_item(cache_key)
+        if cached is not None:
+            return float(cached)
+            
         # 1. Try Gamma API (High availability, broad data)
         try:
             res = requests.get(f"https://gamma-api.polymarket.com/markets?condition_id={condition_id}")
@@ -159,7 +163,9 @@ class PolymarketService:
                     # outcomePrices is a stringified JSON array: ["0.6", "0.4"]
                     prices = json.loads(markets[0].get("outcomePrices", "[0.5, 0.5]"))
                     # Return YES price (usually index 0)
-                    return float(prices[0])
+                    price = float(prices[0])
+                    set_cache_item(cache_key, price, 60) # 60s cache
+                    return price
         except Exception as e:
             print(f"Error fetching Polymarket price via Gamma: {e}")
 
@@ -168,7 +174,9 @@ class PolymarketService:
             res = requests.get(f"{self.base_url}/price?condition_id={condition_id}")
             if res.ok:
                 data = res.json()
-                return float(data.get("price", 0.5))
+                price = float(data.get("price", 0.5))
+                set_cache_item(cache_key, price, 60)
+                return price
         except Exception as e:
             print(f"Error fetching Polymarket price via CLOB: {e}")
 
